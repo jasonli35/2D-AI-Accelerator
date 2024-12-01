@@ -14,6 +14,17 @@ module core #(
     output  [psum_bw*col-1:0]   sfp_out
 );
 wire [31:0] Q1;
+wire [psum_bw * col - 1:0] Q2;//testing
+corelet #(
+) corelet_instance (
+    .clk(clk),
+    .reset(reset),
+    .inst(inst),
+    .coreletIn(Q1),
+    .psumIn(Q2),//testing
+    .sfpIn(sfp_out),
+    .sfpOut(sfp_out)
+);
 sram_32b_w2048 #(
 ) sram_xmem (
     .CLK(clk),
@@ -23,5 +34,4 @@ sram_32b_w2048 #(
     .WEN(inst[18]),
     .Q(Q1)
 );
-
 endmodule

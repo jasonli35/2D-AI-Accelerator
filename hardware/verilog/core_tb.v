@@ -108,8 +108,8 @@ initial begin
   ofifo_rd = 0;
   ififo_wr = 0;
   ififo_rd = 0;
-  l0_rd    = 0;
-  l0_wr    = 0;
+  l0_rd    = 1;
+  l0_wr    = 1;
   execute  = 0;
   load     = 0;
 
@@ -204,7 +204,7 @@ initial begin
     for (i=0; i<10 ; i=i+1) begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
-      A_xmem += 1;
+      A_xmem += 1;//needs to be changed, currently cap at 10
     end
     
 
@@ -213,7 +213,11 @@ initial begin
     /////// Kernel loading to PEs ///////
     //...
     /////////////////////////////////////
-  
+    for (i = 0; i < 10; i++) begin
+      #0.5 clk = 1'b0;
+      #0.5 clk = 1'b1;
+
+    end
 
 
     ////// provide some intermission to clear up the kernel loading ///
@@ -221,10 +225,6 @@ initial begin
     #0.5 clk = 1'b1;  
   
 
-    for (i=0; i<10 ; i=i+1) begin
-      #0.5 clk = 1'b0;
-      #0.5 clk = 1'b1;  
-    end
     /////////////////////////////////////
 
 
@@ -236,12 +236,17 @@ initial begin
     for (i=0; i<10 ; i=i+1) begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
-      A_xmem += 1;
+      A_xmem += 1;//needs to be changed, currently cap at 10
     end
 
 
     /////// Execution ///////
-    //...
+    for (i=0; i<10 ; i=i+1) begin
+      #0.5 clk = 1'b0;
+      #0.5 clk = 1'b1;  
+      l0_rd = 1;
+      l0_wr = 1;
+    end
     /////////////////////////////////////
 
 
