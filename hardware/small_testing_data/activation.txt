@@ -1,0 +1,2 @@
+#time0row7[msb-lsb],time0row6[msb-lst],....,time0row0[msb-lst]#
+01000011000100000000010000000001

@@ -1,0 +1,3 @@
+#col0row7[msb-lsb],col0row6[msb-lst],....,col0row0[msb-lst]#
+11111100110111100000111100100010
+
