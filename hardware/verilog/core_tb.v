@@ -44,8 +44,6 @@ reg acc = 0;
 reg [1:0]  inst_w; 
 reg [bw*row-1:0] D_xmem;
 reg [psum_bw*col-1:0] answer;
-
-
 reg ofifo_rd;
 reg ififo_wr;
 reg ififo_rd;
@@ -166,7 +164,6 @@ initial begin
 
     #0.5 clk = 1'b0;   reset = 1;
     #0.5 clk = 1'b1; 
-
     for (i=0; i<10 ; i=i+1) begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
@@ -201,22 +198,22 @@ initial begin
     /////////////////////////////////////
     CEN_xmem = 0;
     WEN_xmem = 1;
-    for (i=0; i<10 ; i=i+1) begin
+    A_xmem = 11'b00000000000;
+    for (i=0; i<col ; i=i+1) begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
-      A_xmem += 1;//needs to be changed, currently cap at 10
+      A_xmem += 1;//needs to be changed, currently cap at 10//not correct
+      l0_rd_q = 1;
     end
     
-
+    
 
 
     /////// Kernel loading to PEs ///////
     //...
     /////////////////////////////////////
-    for (i = 0; i < 10; i++) begin
-      #0.5 clk = 1'b0;
-      #0.5 clk = 1'b1;
-
+   for (i=0; i<col ; i=i+1) begin
+      load = 1;
     end
 
 
@@ -236,7 +233,9 @@ initial begin
     for (i=0; i<10 ; i=i+1) begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
-      A_xmem += 1;//needs to be changed, currently cap at 10
+      A_xmem += 1;//needs to be changed, currently cap at 10//correctly load
+      
+      l0_rd_q = 1;
     end
 
 
@@ -257,7 +256,10 @@ initial begin
     //...
     /////////////////////////////////////
 
-
+ for (i=0; i<10 ; i=i+1) begin
+      #0.5 clk = 1'b0;
+      #0.5 clk = 1'b1;  
+    end
   end  // end of kij loop
 
 
