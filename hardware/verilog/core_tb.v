@@ -198,12 +198,13 @@ initial begin
     /////////////////////////////////////
     CEN_xmem = 0;
     WEN_xmem = 1;
-    A_xmem = 11'b00000000000;
+    A_xmem = 11'b10000000000;
     for (i=0; i<col ; i=i+1) begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
       A_xmem += 1;//needs to be changed, currently cap at 10//not correct
       l0_rd_q = 1;
+      load = 1;
     end
     
     
@@ -212,9 +213,7 @@ initial begin
     /////// Kernel loading to PEs ///////
     //...
     /////////////////////////////////////
-   for (i=0; i<col ; i=i+1) begin
-      load = 1;
-    end
+   
 
 
     ////// provide some intermission to clear up the kernel loading ///
@@ -229,13 +228,16 @@ initial begin
     /////// Activation data writing to L0 ///////
     //...
     /////////////////////////////////////
-    A_xmem =  11'b10000000000;
+    A_xmem =  11'b00000000000;
+    CEN_xmem = 0;
+    WEN_xmem = 1;
     for (i=0; i<10 ; i=i+1) begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
       A_xmem += 1;//needs to be changed, currently cap at 10//correctly load
       
       l0_rd_q = 1;
+      execute = 1;
     end
 
 
@@ -245,6 +247,7 @@ initial begin
       #0.5 clk = 1'b1;  
       l0_rd = 1;
       l0_wr = 1;
+
     end
     /////////////////////////////////////
 
