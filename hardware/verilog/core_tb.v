@@ -263,6 +263,8 @@ initial begin
       #0.5 clk = 1'b0;
       #0.5 clk = 1'b1;  
     end
+   #0.5 clk = 1'b0;
+      #0.5 clk = 1'b1;  
   end  // end of kij loop
 
 
