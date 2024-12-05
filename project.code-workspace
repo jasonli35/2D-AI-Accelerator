@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "project",
+			"path": "."
+		},
+		{
+			"name": "Hardware-real",
+			"path": "../../Hardware-real"
+		}
+	],
+	"settings": {}
+}
