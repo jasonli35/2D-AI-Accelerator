@@ -1,0 +1,11 @@
+./verilog/corelet.v
+./verilog/v0.v
+./verilog/mac_array.v
+./verilog/mac_row.v
+./verilog/mac_tile.v
+./verilog/mac.v
+./verilog/ofifo.v
+./verilog/sfp.v
+./verilog/mac_array_os.v
+./verilog/mac_tile_os.v
+./verilog/ififo.v
