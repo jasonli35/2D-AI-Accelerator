@@ -53,16 +53,15 @@ reg l0_rd;
 reg l0_wr;
 reg execute;
 reg load;
-reg [8*30:1] stringvar;
 reg [8*30:1] w_file_name;
 wire ofifo_valid;
 wire [col*psum_bw-1:0] sfp_out;
 
-integer x_file, x_scan_file ; // file_handler
-integer w_file, w_scan_file ; // file_handler
-integer acc_file, acc_scan_file ; // file_handler
-integer out_file, out_scan_file ; // file_handler
-integer captured_data; 
+integer x_file, x_scan_file ;
+integer w_file, w_scan_file ;
+integer acc_file, acc_scan_file ;
+integer out_file, out_scan_file ;
+integer psum_file;
 integer t, i, j, k, kij;
 integer error;
 
@@ -85,8 +84,8 @@ core #(  .row(row), .col(col), .bw(bw), .psum_bw(psum_bw), .num(num)) core (
 	.clk(clk), 
 	.inst(inst_q),
 	.valid(ofifo_valid),
-        .D_xmem(D_xmem_q), 
-        .coreOut(sfp_out), 
+    .D_xmem(D_xmem_q), 
+    .coreOut(sfp_out), 
 	.reset(reset)
 ); 
 
@@ -108,98 +107,103 @@ initial begin
 	$dumpfile("core_tb.vcd");
 	$dumpvars(0,core_tb);
 
-	x_file = $fopen("./files/activation/activation.txt", "r");
-  	// Remove the first three comment lines of the file
-  	x_scan_file = $fscanf(x_file,"%s", captured_data);
-  	x_scan_file = $fscanf(x_file,"%s", captured_data);
-  	x_scan_file = $fscanf(x_file,"%s", captured_data);
+	x_file = $fopen("activation.txt", "r");
+	w_file = $fopen("weight0.txt", "r");
+	psum_file = $fopen("psum.txt", "w");
 
 	// Reset
-  	#0.5 clk = 1'b0;   reset = 1;
-  	#0.5 clk = 1'b1; 
+	#0.5 clk = 1'b0;   reset = 1;
+	#0.5 clk = 1'b1; 
 
 	for (i=0; i<10 ; i=i+1) begin
-    	#0.5 clk = 1'b0;
-    	#0.5 clk = 1'b1;  
-  	end
+		#0.5 clk = 1'b0;
+		#0.5 clk = 1'b1;  
+	end
 
-	#0.5 clk = 1'b0;	reset = 0;
-  	#0.5 clk = 1'b1; 
+	#0.5 clk = 1'b0; reset = 0;
+	#0.5 clk = 1'b1; 
 
-  	#0.5 clk = 1'b0;   
-  	#0.5 clk = 1'b1;
-
-  	// Activation data writing to memory
-  	for (t=0; t<len_nij; t=t+1) begin  
-  		#0.5 clk = 1'b0;
+	// Activation data writing to memory
+	for (t=0; t<len_nij; t=t+1) begin  
+		#0.5 clk = 1'b0;
 		x_scan_file = $fscanf(x_file, "%32b", D_xmem);
 		WEN_xmem = 0;
 		CEN_xmem = 0;
 		if (t>0) A_xmem = A_xmem + 1;
-  		#0.5 clk = 1'b1;   
-  	end
+		#0.5 clk = 1'b1;   
+	end
 
 	#0.5 clk = 1'b0;  WEN_xmem = 1;  CEN_xmem = 1; A_xmem = 0;
 	#0.5 clk = 1'b1; 
 
 	$fclose(x_file);
 
-	// Kernel data and weights to IFIFO
 	for (kij=0; kij<9; kij=kij+1) begin  // kij loop
-	    case(kij)
-		    0: w_file_name = "./files/weights/weight0.txt";
-		    1: w_file_name = "./files/weights/weight1.txt";
-		    2: w_file_name = "./files/weights/weight2.txt";
-		    3: w_file_name = "./files/weights/weight3.txt";
-		    4: w_file_name = "./files/weights/weight4.txt";
-	        5: w_file_name = "./files/weights/weight5.txt";
-		    6: w_file_name = "./files/weights/weight6.txt";
-		    7: w_file_name = "./files/weights/weight7.txt";
-		    8: w_file_name = "./files/weights/weight8.txt";
-	    endcase
+		case(kij)
+			0: w_file_name = "weight0.txt";
+			1: w_file_name = "weight1.txt";
+			2: w_file_name = "weight2.txt";
+			3: w_file_name = "weight3.txt";
+			4: w_file_name = "weight4.txt";
+			5: w_file_name = "weight5.txt";
+			6: w_file_name = "weight6.txt";
+			7: w_file_name = "weight7.txt";
+			8: w_file_name = "weight8.txt";
+		endcase
 
-	    w_file = $fopen(w_file_name, "r");
-	    // Skip comments
-	    w_scan_file = $fscanf(w_file,"%s", captured_data);
-	    w_scan_file = $fscanf(w_file,"%s", captured_data);
-	    w_scan_file = $fscanf(w_file,"%s", captured_data);
+		w_file = $fopen(w_file_name, "r");
 
-	    for (t=0; t<col; t=t+1) begin  
-	        #0.5 clk = 1'b0;
-		    w_scan_file = $fscanf(w_file, "%32b", D_xmem);
-		    ififo_wr = 1;
-		    if (t>0) A_xmem = A_xmem + 1;
-	        #0.5 clk = 1'b1;   
-	    end
+		#0.5 clk = 1'b0; reset = 1;
+		#0.5 clk = 1'b1; 
 
-	    #0.5 clk = 1'b0;  ififo_wr = 0;
-	    #0.5 clk = 1'b1; 
+		for (i=0; i<10 ; i=i+1) begin
+			#0.5 clk = 1'b0;
+			#0.5 clk = 1'b1;  
+		end
+
+		#0.5 clk = 1'b0; reset = 0;
+		#0.5 clk = 1'b1; 
+
+		// Weight loading into IFIFO
+		for (t=0; t<col; t=t+1) begin  
+			#0.5 clk = 1'b0;
+			w_scan_file = $fscanf(w_file, "%32b", D_xmem);
+			ififo_wr = 1;
+			#0.5 clk = 1'b1;   
+		end
+		$fclose(w_file);
 	end
 
-	// Verification and Execution
-	// Similar to original flow but integrating IFIFO interactions
+	// Execution and PSUM collection
+	for (t=0; t<len_nij; t=t+1) begin
+		#0.5 clk = 1'b0;
+		ififo_rd = 1;
+		execute = 1;
+		#0.5 clk = 1'b1;
+		$fwrite(psum_file, "%128b\n", sfp_out);
+	end
 
+	$fclose(psum_file);
 	$finish;
-
 end
 
 always @ (posedge clk) begin
-   inst_w_q   <= inst_w; 
-   D_xmem_q   <= D_xmem;
-   CEN_xmem_q <= CEN_xmem;
-   WEN_xmem_q <= WEN_xmem;
-   A_pmem_q   <= A_pmem;
-   CEN_pmem_q <= CEN_pmem;
-   WEN_pmem_q <= WEN_pmem;
-   A_xmem_q   <= A_xmem;
-   ofifo_rd_q <= ofifo_rd;
-   acc_q      <= acc;
-   ififo_wr_q <= ififo_wr;
-   ififo_rd_q <= ififo_rd;
-   l0_rd_q    <= l0_rd;
-   l0_wr_q    <= l0_wr ;
-   execute_q  <= execute;
-   load_q     <= load;
+	inst_w_q   <= inst_w; 
+	D_xmem_q   <= D_xmem;
+	CEN_xmem_q <= CEN_xmem;
+	WEN_xmem_q <= WEN_xmem;
+	A_pmem_q   <= A_pmem;
+	CEN_pmem_q <= CEN_pmem;
+	WEN_pmem_q <= WEN_pmem;
+	A_xmem_q   <= A_xmem;
+	ofifo_rd_q <= ofifo_rd;
+	acc_q      <= acc;
+	ififo_wr_q <= ififo_wr;
+	ififo_rd_q <= ififo_rd;
+	l0_rd_q    <= l0_rd;
+	l0_wr_q    <= l0_wr;
+	execute_q  <= execute;
+	load_q     <= load;
 end
 
 endmodule
