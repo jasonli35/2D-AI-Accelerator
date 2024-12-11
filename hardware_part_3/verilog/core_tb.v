@@ -106,6 +106,7 @@ initial begin
 	$dumpfile("core_tb.vcd");
 	$dumpvars(0,core_tb);
 
+	$display("Opening activation and weight files...");
 	x_file = $fopen("files/activation/activation.txt", "r");
 	if (x_file == 0) begin
 		$display("ERROR: Activation file not found!");
@@ -124,9 +125,12 @@ initial begin
 		$finish;
 	end
 
+	$display("Initialization complete. Starting simulation...");
+
 	// Reset
 	#0.5 clk = 1'b0;   reset = 1;
 	#0.5 clk = 1'b1; 
+	$display("Resetting the core...");
 
 	for (i=0; i<10 ; i=i+1) begin
 		#0.5 clk = 1'b0;
@@ -135,11 +139,14 @@ initial begin
 
 	#0.5 clk = 1'b0; reset = 0;
 	#0.5 clk = 1'b1; 
+	$display("Reset complete.");
 
 	// Activation data writing to memory
+	$display("Writing activation data to memory...");
 	for (t=0; t<len_nij; t=t+1) begin  
 		#0.5 clk = 1'b0;
 		x_scan_file = $fscanf(x_file, "%32b", D_xmem);
+		$display("Writing activation %0d: %b", t, D_xmem);
 		WEN_xmem = 0;
 		CEN_xmem = 0;
 		if (t>0) A_xmem = A_xmem + 1;
@@ -182,9 +189,11 @@ initial begin
 		#0.5 clk = 1'b1; 
 
 		// Weight loading into IFIFO
+		$display("Loading weights from %s into IFIFO...", w_file_name);
 		for (t=0; t<col; t=t+1) begin  
 			#0.5 clk = 1'b0;
 			w_scan_file = $fscanf(w_file, "%32b", D_xmem);
+			$display("Loading weight %0d: %b", t, D_xmem);
 			ififo_wr = 1;
 			#0.5 clk = 1'b1;   
 		end
@@ -192,15 +201,18 @@ initial begin
 	end
 
 	// Execution and PSUM collection
+	$display("Starting execution and PSUM collection...");
 	for (t=0; t<len_nij; t=t+1) begin
 		#0.5 clk = 1'b0;
 		ififo_rd = 1;
 		execute = 1;
 		#0.5 clk = 1'b1;
+		$display("Cycle %0d: PSUM Output: %b", t, sfp_out);
 		$fwrite(psum_file, "%128b\n", sfp_out);
 	end
 
 	$fclose(psum_file);
+	$display("Simulation completed. PSUM results written to psum.txt.");
 	$finish;
 end
 
