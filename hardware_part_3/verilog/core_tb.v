@@ -106,13 +106,13 @@ initial begin
 	$dumpfile("core_tb.vcd");
 	$dumpvars(0,core_tb);
 
-	x_file = $fopen("./files/activation/activation.txt", "r");
+	x_file = $fopen("files/activation/activation.txt", "r");
 	if (x_file == 0) begin
 		$display("ERROR: Activation file not found!");
 		$finish;
 	end
 
-	w_file = $fopen("./files/weights/weight0.txt", "r");
+	w_file = $fopen("files/weights/weight0.txt", "r");
 	if (w_file == 0) begin
 		$display("ERROR: Weight file not found!");
 		$finish;
@@ -153,15 +153,15 @@ initial begin
 
 	for (kij=0; kij<9; kij=kij+1) begin  // kij loop
 		case(kij)
-			0: w_file_name = "./files/weights/weight0.txt";
-			1: w_file_name = "./files/weights/weight1.txt";
-			2: w_file_name = "./files/weights/weight2.txt";
-			3: w_file_name = "./files/weights/weight3.txt";
-			4: w_file_name = "./files/weights/weight4.txt";
-			5: w_file_name = "./files/weights/weight5.txt";
-			6: w_file_name = "./files/weights/weight6.txt";
-			7: w_file_name = "./files/weights/weight7.txt";
-			8: w_file_name = "./files/weights/weight8.txt";
+			0: w_file_name = "files/weights/weight0.txt";
+			1: w_file_name = "files/weights/weight1.txt";
+			2: w_file_name = "files/weights/weight2.txt";
+			3: w_file_name = "files/weights/weight3.txt";
+			4: w_file_name = "files/weights/weight4.txt";
+			5: w_file_name = "files/weights/weight5.txt";
+			6: w_file_name = "files/weights/weight6.txt";
+			7: w_file_name = "files/weights/weight7.txt";
+			8: w_file_name = "files/weights/weight8.txt";
 		endcase
 
 		w_file = $fopen(w_file_name, "r");
