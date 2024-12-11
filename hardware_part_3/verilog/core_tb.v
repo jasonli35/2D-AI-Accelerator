@@ -225,4 +225,4 @@ always @ (posedge clk) begin
 	load_q     <= load;
 end
 
-endmodulew
+endmodule
