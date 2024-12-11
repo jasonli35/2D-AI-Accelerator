@@ -57,10 +57,12 @@ reg [8*30:1] captured_data;
 wire ofifo_valid;
 wire [col*psum_bw-1:0] sfp_out;
 
-integer x_file, x_scan_file ;
-integer w_file, w_scan_file ;
-integer acc_file, acc_scan_file ;
-integer out_file, out_scan_file ;
+reg [col*psum_bw-1:0] expected_value; // Expected value for verification
+
+integer x_file, x_scan_file;
+integer w_file, w_scan_file;
+integer acc_file, acc_scan_file;
+integer out_file, out_scan_file;
 integer t, i, j, k, kij;
 integer error;
 
@@ -142,6 +144,7 @@ initial begin
 
 	// Execution and Verification
 	error = 0;
+	expected_value = /* Define the expected value logic or initialization */;
 	for (t=0; t<len_nij; t=t+1) begin
 		#0.5 clk = 1'b0;
 		ififo_rd = 1;
@@ -152,6 +155,8 @@ initial begin
 		if (sfp_out !== expected_value) begin
 			$display("ERROR: Output mismatch at cycle %0d", t);
 			error = error + 1;
+		end else begin
+			$display("Output matched at cycle %0d", t);
 		end
 	end
 
