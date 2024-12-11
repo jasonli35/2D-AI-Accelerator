@@ -17,7 +17,7 @@ reg reset = 1;
 
 wire [33:0] inst_q; 
 
-reg [1:0]  inst_w_q = 0; 
+reg [1:0] inst_w_q = 0; 
 reg [bw*row-1:0] D_xmem_q = 0;
 reg CEN_xmem = 1;
 reg WEN_xmem = 1;
@@ -41,7 +41,7 @@ reg load_q = 0;
 reg acc_q = 0;
 reg acc = 0;
 
-reg [1:0]  inst_w; 
+reg [1:0] inst_w; 
 reg [bw*row-1:0] D_xmem;
 reg [psum_bw*col-1:0] answer;
 
@@ -153,43 +153,6 @@ initial begin
 	if (psum_file == 0) begin
 		$display("ERROR: Could not create psum file!");
 		$finish;
-	end
-
-	// Process weights for kij loop
-	for (kij = 0; kij < len_kij; kij = kij + 1) begin
-		case(kij)
-			0: w_file_name = "files/weights/weight0.txt";
-			1: w_file_name = "files/weights/weight1.txt";
-			2: w_file_name = "files/weights/weight2.txt";
-			3: w_file_name = "files/weights/weight3.txt";
-			4: w_file_name = "files/weights/weight4.txt";
-			5: w_file_name = "files/weights/weight5.txt";
-			6: w_file_name = "files/weights/weight6.txt";
-			7: w_file_name = "files/weights/weight7.txt";
-			8: w_file_name = "files/weights/weight8.txt";
-		endcase
-
-		w_file = $fopen(w_file_name, "r");
-		if (w_file == 0) begin
-			$display("ERROR: Weight file %s not found!", w_file_name);
-			$finish;
-		end
-
-		// Skip weight comment lines
-		dummy = $fscanf(w_file, "%s\n", D_xmem);
-		dummy = $fscanf(w_file, "%s\n", D_xmem);
-		dummy = $fscanf(w_file, "%s\n", D_xmem);
-		$display("Skipped weight comment lines for kij=%0d.", kij);
-
-		// Weight data loading into IFIFO
-		for (t = 0; t < col; t = t + 1) begin
-			#0.5 clk = 1'b0;
-			w_scan_file = $fscanf(w_file, "%32b", D_xmem);
-			ififo_wr = 1;
-			$display("Writing weight %0d for kij=%0d: %b", t, kij, D_xmem);
-			#0.5 clk = 1'b1;
-		end
-		$fclose(w_file);
 	end
 
 	// Execution and PSUM collection
