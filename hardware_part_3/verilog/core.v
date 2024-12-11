@@ -15,6 +15,26 @@ module core #(
 
 wire [psum_bw*col-1:0] ofifoOut;
 
+// Signals for IFIFO
+wire ififo_rd, ififo_wr;
+wire [bw*row-1:0] ififo_out;
+wire ififo_full, ififo_empty;
+
+assign ififo_rd = inst[4];
+assign ififo_wr = inst[5];
+
+// Instantiate IFIFO
+ififo #(.col(row), .bw(bw)) ififo_instance (
+    .clk(clk),
+    .in(D_xmem),
+    .out(ififo_out),
+    .rd(ififo_rd),
+    .wr(ififo_wr),
+    .reset(reset),
+    .o_full(ififo_full),
+    .o_empty(ififo_empty)
+);
+
 wire xMemWEN;
 wire xMemCEN;
 wire [10:0]xMemAddress;
@@ -34,11 +54,11 @@ assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
 //Instantiate corelet
-corelet #(.row(row),.col(col),.psum_bw(psum_bw),.bw(bw)) corelet (
+corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet (
     .clk(clk),
     .reset(reset),
     .inst(inst),
-    .coreletIn(xMemOut),
+    .coreletIn(ififo_out),
     .psumIn(ofifoOut),
     .sfpIn(psumMemOut),
     .sfpOut(coreOut)

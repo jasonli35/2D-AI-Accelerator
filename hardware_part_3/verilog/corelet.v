@@ -13,7 +13,11 @@ module corelet #(
     output [psum_bw*col-1:0] sfpOut
 );
 
-//L0 signals
+// Mode selection signal for WS/OS
+wire mode_sel;
+assign mode_sel = inst[7];
+
+// L0 signals
 wire l0_wr;
 wire l0_rd;
 wire [bw*row-1:0] l0_out;
@@ -22,7 +26,6 @@ wire l0_ready;
 
 assign l0_wr = inst[2];
 assign l0_rd = inst[3];
-
 
 l0 #(.row(row), .bw(bw)) L0_instance (
     .clk(clk),
@@ -42,20 +45,19 @@ wire [psum_bw*col-1:0] macArrayIn_n;
 
 assign macArrayInst = inst[1:0];
 assign macArrayIn_n = 0;
-assign macArrayIn = l0_out;
 
-mac_array #(.bw(bw),.psum_bw(psum_bw),.col(col),.row(row)) mac_array (
+mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
     .reset(reset),
     .out_s(macArrayOut),
     .in_w(l0_out),
     .inst_w(macArrayInst),
     .in_n(macArrayIn_n),
-    .valid(valid)
+    .valid(valid),
+    .mode_sel(mode_sel) // Added mode selection for WS/OS
 );
 
-//OFIFO signals
-
+// OFIFO signals
 wire ofifo_rd;
 wire [psum_bw*col-1:0] ofifo_in;
 wire [psum_bw*col-1:0] ofifo_out;
@@ -67,7 +69,7 @@ assign ofifo_rd = inst[6];
 assign ofifo_in = macArrayOut;
 assign psumIn = ofifo_out;
 
-//Instantiate OFIFO
+// Instantiate OFIFO
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .clk(clk),
     .reset(reset),
@@ -80,6 +82,7 @@ ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .o_valid(ofifo_valid)
 );
 
+// SFP signals
 wire sfp_acc;
 wire sfp_relu;
 wire [psum_bw*col-1:0] sfp_in;
@@ -89,7 +92,7 @@ assign sfp_acc = inst[33];
 assign sfp_relu = 0;
 assign sfpOut = sfp_out;
 
-//Instantiate SFP
+// Instantiate SFP
 genvar i;
 for (i=1; i<col+1; i=i+1) begin : sfp_num
     sfp #(.psum_bw(psum_bw)) sfp_instance (
