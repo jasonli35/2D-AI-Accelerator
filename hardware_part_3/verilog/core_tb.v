@@ -56,13 +56,11 @@ reg [8*30:1] w_file_name;
 wire ofifo_valid;
 wire [col*psum_bw-1:0] sfp_out;
 
-integer x_file, x_scan_file ;
-integer w_file, w_scan_file ;
-integer acc_file, acc_scan_file ;
-integer out_file, out_scan_file ;
+integer x_file, x_scan_file;
+integer w_file, w_scan_file;
 integer psum_file;
-integer t, i, j, k, kij;
-integer error;
+integer t, i, kij;
+integer dummy; // Used for skipping comment lines
 
 assign inst_q[33] = acc_q;
 assign inst_q[32] = CEN_pmem_q;
@@ -89,7 +87,6 @@ core #(  .row(row), .col(col), .bw(bw), .psum_bw(psum_bw), .num(num)) core (
 ); 
 
 initial begin 
-
 	inst_w   = 0; 
 	D_xmem   = 0;
 	CEN_xmem = 1;
@@ -106,31 +103,22 @@ initial begin
 	$dumpfile("core_tb.vcd");
 	$dumpvars(0,core_tb);
 
-	$display("Opening activation and weight files...");
+	// Open activation file
 	x_file = $fopen("files/activation/activation.txt", "r");
 	if (x_file == 0) begin
 		$display("ERROR: Activation file not found!");
 		$finish;
 	end
 
-	w_file = $fopen("files/weights/weight0.txt", "r");
-	if (w_file == 0) begin
-		$display("ERROR: Weight file not found!");
-		$finish;
-	end
-
-	psum_file = $fopen("psum.txt", "w");
-	if (psum_file == 0) begin
-		$display("ERROR: Could not create psum file!");
-		$finish;
-	end
-
-	$display("Initialization complete. Starting simulation...");
+	// Skip comment lines in activation.txt
+	dummy = $fscanf(x_file, "%s\n", D_xmem);
+	dummy = $fscanf(x_file, "%s\n", D_xmem);
+	dummy = $fscanf(x_file, "%s\n", D_xmem);
+	$display("Skipped activation comment lines.");
 
 	// Reset
 	#0.5 clk = 1'b0;   reset = 1;
 	#0.5 clk = 1'b1; 
-	$display("Resetting the core...");
 
 	for (i=0; i<10 ; i=i+1) begin
 		#0.5 clk = 1'b0;
@@ -139,18 +127,20 @@ initial begin
 
 	#0.5 clk = 1'b0; reset = 0;
 	#0.5 clk = 1'b1; 
-	$display("Reset complete.");
 
 	// Activation data writing to memory
-	$display("Writing activation data to memory...");
-	for (t=0; t<len_nij; t=t+1) begin  
+	for (t = 0; t < len_nij; t = t + 1) begin  
 		#0.5 clk = 1'b0;
 		x_scan_file = $fscanf(x_file, "%32b", D_xmem);
-		$display("Writing activation %0d: %b", t, D_xmem);
+		if (x_scan_file != 1) begin
+			$display("ERROR: Failed to read activation data at line %0d", t + 4);
+			$finish;
+		end
 		WEN_xmem = 0;
 		CEN_xmem = 0;
-		if (t>0) A_xmem = A_xmem + 1;
-		#0.5 clk = 1'b1;   
+		if (t > 0) A_xmem = A_xmem + 1;
+		$display("Writing activation %0d: %b", t, D_xmem);
+		#0.5 clk = 1'b1;
 	end
 
 	#0.5 clk = 1'b0;  WEN_xmem = 1;  CEN_xmem = 1; A_xmem = 0;
@@ -158,7 +148,15 @@ initial begin
 
 	$fclose(x_file);
 
-	for (kij=0; kij<9; kij=kij+1) begin  // kij loop
+	// Open psum file
+	psum_file = $fopen("psum.txt", "w");
+	if (psum_file == 0) begin
+		$display("ERROR: Could not create psum file!");
+		$finish;
+	end
+
+	// Process weights for kij loop
+	for (kij = 0; kij < len_kij; kij = kij + 1) begin
 		case(kij)
 			0: w_file_name = "files/weights/weight0.txt";
 			1: w_file_name = "files/weights/weight1.txt";
@@ -177,42 +175,34 @@ initial begin
 			$finish;
 		end
 
-		#0.5 clk = 1'b0; reset = 1;
-		#0.5 clk = 1'b1; 
+		// Skip weight comment lines
+		dummy = $fscanf(w_file, "%s\n", D_xmem);
+		dummy = $fscanf(w_file, "%s\n", D_xmem);
+		dummy = $fscanf(w_file, "%s\n", D_xmem);
+		$display("Skipped weight comment lines for kij=%0d.", kij);
 
-		for (i=0; i<10 ; i=i+1) begin
-			#0.5 clk = 1'b0;
-			#0.5 clk = 1'b1;  
-		end
-
-		#0.5 clk = 1'b0; reset = 0;
-		#0.5 clk = 1'b1; 
-
-		// Weight loading into IFIFO
-		$display("Loading weights from %s into IFIFO...", w_file_name);
-		for (t=0; t<col; t=t+1) begin  
+		// Weight data loading into IFIFO
+		for (t = 0; t < col; t = t + 1) begin
 			#0.5 clk = 1'b0;
 			w_scan_file = $fscanf(w_file, "%32b", D_xmem);
-			$display("Loading weight %0d: %b", t, D_xmem);
 			ififo_wr = 1;
-			#0.5 clk = 1'b1;   
+			$display("Writing weight %0d for kij=%0d: %b", t, kij, D_xmem);
+			#0.5 clk = 1'b1;
 		end
 		$fclose(w_file);
 	end
 
 	// Execution and PSUM collection
-	$display("Starting execution and PSUM collection...");
-	for (t=0; t<len_nij; t=t+1) begin
+	for (t = 0; t < len_nij; t = t + 1) begin
 		#0.5 clk = 1'b0;
 		ififo_rd = 1;
 		execute = 1;
 		#0.5 clk = 1'b1;
-		$display("Cycle %0d: PSUM Output: %b", t, sfp_out);
 		$fwrite(psum_file, "%128b\n", sfp_out);
+		$display("Collected PSUM %0d: %b", t, sfp_out);
 	end
 
 	$fclose(psum_file);
-	$display("Simulation completed. PSUM results written to psum.txt.");
 	$finish;
 end
 
@@ -235,4 +225,4 @@ always @ (posedge clk) begin
 	load_q     <= load;
 end
 
-endmodule
+endmodulew
