@@ -323,7 +323,7 @@ initial begin
 			CEN_pmem = 0;
 			if (t > 0) begin
     			A_pmem = A_pmem + 1;
-    			$display("A_pmem updated: %0d at time %0t", A_pmem, $time); // Prints the updated value of A_pmem and current simulation time
+    			// $display("A_pmem updated: %0d at time %0t", A_pmem, $time); // Prints the updated value of A_pmem and current simulation time
 			end
       		#0.5 clk = 1'b1;  
     	end
@@ -382,7 +382,6 @@ initial begin
 			CEN_pmem = 0;
 			WEN_pmem = 1;
 			acc_scan_file = $fscanf(acc_file,"%11b", A_pmem);
-			$display("Value read from file: %d, Stored in A_pmem: %d at time %0t", acc_scan_file, A_pmem, $time);
 		end
         else begin
 			CEN_pmem = 1;
