@@ -58,13 +58,12 @@ wire ofifo_valid;
 wire [col*psum_bw-1:0] sfp_out;
 
 reg [col*psum_bw-1:0] expected_value; // Expected value for verification
+reg [col*psum_bw-1:0] psum_value; // Expected psum value
 
 integer x_file, x_scan_file;
-integer w_file, w_scan_file;
-integer acc_file, acc_scan_file;
-integer out_file, out_scan_file;
-integer t, i, j, k, kij;
-integer error;
+integer expected_file, expected_scan_file;
+integer psum_file, psum_scan_file;
+integer t, i, error;
 
 assign inst_q[33] = acc_q;
 assign inst_q[32] = CEN_pmem_q;
@@ -109,7 +108,15 @@ initial begin
 	$dumpvars(0,core_tb);
 
 	x_file = $fopen("./files/activation/activation.txt", "r");
-	// Skip comment lines
+	psum_file = $fopen("./files/expected/psum_values.txt", "r");
+	expected_file = $fopen("./files/expected/expected_values.txt", "r");
+
+	if (x_file == 0 || psum_file == 0 || expected_file == 0) begin
+		$display("ERROR: Input files not found!");
+		$finish;
+	end
+
+	// Skip comment lines in activation file
 	x_scan_file = $fscanf(x_file, "%s", captured_data);
 	x_scan_file = $fscanf(x_file, "%s", captured_data);
 	x_scan_file = $fscanf(x_file, "%s", captured_data);
@@ -144,23 +151,45 @@ initial begin
 
 	// Execution and Verification
 	error = 0;
-	expected_value = /* Define the expected value logic or initialization */;
 	for (t=0; t<len_nij; t=t+1) begin
 		#0.5 clk = 1'b0;
 		ififo_rd = 1;
 		execute = 1;
+		psum_scan_file = $fscanf(psum_file, "%128b", psum_value);
 		#0.5 clk = 1'b1;
-		$display("Executing cycle %0d: Output = %b", t, sfp_out);
-		// Verify output
-		if (sfp_out !== expected_value) begin
-			$display("ERROR: Output mismatch at cycle %0d", t);
-			error = error + 1;
+		$display("Cycle %0d: Output = %b | Expected PSUM = %b", t, sfp_out, psum_value);
+		// Verify psum output
+		if (sfp_out === psum_value) begin
+			$display("PSUM Data Matched at cycle %0d", t);
 		end else begin
-			$display("Output matched at cycle %0d", t);
+			$display("ERROR: PSUM mismatch at cycle %0d", t);
+			error = error + 1;
+		end
+	end
+
+	// Verify final output feature
+	for (t=0; t<len_onij; t=t+1) begin
+		expected_scan_file = $fscanf(expected_file, "%128b", expected_value);
+		#0.5 clk = 1'b0;
+		#0.5 clk = 1'b1;
+		$display("Verifying output feature %0d: SFP_OUT = %b | EXPECTED = %b", t, sfp_out, expected_value);
+		if (sfp_out === expected_value) begin
+			$display("Output Feature Matched at cycle %0d", t);
+		end else begin
+			$display("ERROR: Output feature mismatch at cycle %0d", t);
+			error = error + 1;
 		end
 	end
 
 	$display("Execution completed with %0d errors.", error);
+	if (error == 0) begin
+		$display("########### Project Completed: All Data Matched ###########");
+	end else begin
+		$display("########### Project Completed: Errors Detected ###########");
+	end
+
+	$fclose(psum_file);
+	$fclose(expected_file);
 	$finish;
 end
 
