@@ -46,7 +46,7 @@ wire [psum_bw*col-1:0] macArrayIn;
 
 // Conditional input to the MAC array based on mode_select
 assign macArrayInst = inst[1:0];
-assign macArrayIn = (mode_select == 1) ? sfpIn[row * bw - 1 : 0] : l0_out;
+assign macArrayIn = (mode_select == 1) ? sfpIn[bw * row - 1 : 0] : l0_out;
 
 // MAC array instance
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
