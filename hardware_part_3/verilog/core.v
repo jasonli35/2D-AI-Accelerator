@@ -35,16 +35,13 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-// Intermediate wires for conditional connections
-wire [psum_bw*col-1:0] psum_in_wire;
-wire [psum_bw*col-1:0] sfp_in_wire;
+// PSUM conditional signals for mode selection
+wire [psum_bw*col-1:0] psumIn_wire;
 wire psumMemWEN_cond, psumMemCEN_cond;
 
-// Mode-based assignments
-assign psum_in_wire = (mode_select == 1) ? psumMemOut : {psum_bw*col{1'b0}};
-assign sfp_in_wire = (mode_select == 1) ? {psum_bw*col{1'b0}} : psumMemOut;
-assign psumMemWEN_cond = (mode_select == 1) ? psumMemWEN : 1'b1; // Disable writes in WS mode
-assign psumMemCEN_cond = (mode_select == 1) ? psumMemCEN : 1'b1; // Disable accesses in WS mode
+assign psumIn_wire = mode_select ? psumMemOut : {psum_bw*col{1'b0}}; // Use PSUM in OS mode, otherwise zero
+assign psumMemWEN_cond = mode_select ? psumMemWEN : 1'b1;            // Disable writes to PSUM in WS mode
+assign psumMemCEN_cond = mode_select ? psumMemCEN : 1'b1;            // Disable access to PSUM in WS mode
 
 // --- Instantiate corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
@@ -52,8 +49,8 @@ corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(psum_in_wire), // Pass intermediate signal
-    .sfpIn(sfp_in_wire),   // Pass intermediate signal
+    .psumIn(psumIn_wire), // Conditional PSUM input
+    .sfpIn({psum_bw*col{1'b0}}), // No SFP for WS (set to zero)
     .sfpOut(coreOut)
 );
 
