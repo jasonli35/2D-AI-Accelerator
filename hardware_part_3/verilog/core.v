@@ -46,8 +46,8 @@ corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn((mode_select == 1) ? psumMemOut : 0), // Only enable psumMemOut for OS mode
-    .sfpIn((mode_select == 0) ? psumMemOut : 0), // Only enable sfpIn for WS mode
+    .psumIn(psumIn_wire),  // Connect the wire instead of direct conditional logic
+    .sfpIn(psumMemOut),
     .sfpOut(coreOut)
 );
 
