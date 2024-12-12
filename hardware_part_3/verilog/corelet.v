@@ -13,9 +13,9 @@ module corelet #(
     output [psum_bw*col-1:0] sfpOut
 );
 
-// Mode selection signal (added but unused for now)
+// Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // Pass-through only, no logic changes
+assign mode_select = inst[34];
 
 // L0 signals
 wire l0_wr;
@@ -44,7 +44,7 @@ wire [col-1:0] valid;
 wire [psum_bw*col-1:0] macArrayIn_n;
 
 assign macArrayInst = inst[1:0];
-assign macArrayIn_n = 0;
+assign macArrayIn_n = mode_select ? psumIn : 0; // In OS, connect psumIn to MAC array input; in WS, use zero
 assign macArrayIn = l0_out;
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
@@ -67,7 +67,9 @@ wire ofifo_valid;
 
 assign ofifo_rd = inst[6];
 assign ofifo_in = macArrayOut;
-assign psumIn = ofifo_out;
+
+// Conditionally route OFIFO output to psumIn based on mode_select
+assign psumIn = mode_select ? ofifo_out : 0;
 
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .clk(clk),
