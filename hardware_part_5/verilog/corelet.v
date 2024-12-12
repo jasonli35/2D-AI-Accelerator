@@ -49,8 +49,8 @@ ififo #(.col(col), .bw(bw)) ififo_instance (
     .reset(ififo_reset),        // Reset control for looping
     .in(coreletIn[bw*col-1:0]), // Input weights
     .out(ififo_out),            // Output weights
-    .rd(ififo_rd_enable),       // Read control
-    .wr(inst[4] & mode_select), // Write when OS mode and inst[4] active
+    .rd(inst[5] & mode_select), // Read control for OS
+    .wr(inst[4] & mode_select), // Write control for OS
     .o_full(ififo_full),
     .o_empty(ififo_empty)
 );
@@ -61,8 +61,8 @@ always @(posedge clk or posedge reset) begin
         ififo_rd_enable <= 0;
         ififo_reset <= 0;
     end else if (mode_select == 1) begin
-        ififo_rd_enable <= ~ififo_empty;
-        ififo_reset <= ififo_empty; // Reset if `ififo` is empty
+        ififo_rd_enable <= ~ififo_empty; // Enable reading if not empty
+        ififo_reset <= ififo_empty;      // Reset if `ififo` becomes empty
     end else begin
         ififo_rd_enable <= 0; // Disable for WS
         ififo_reset <= 0;    // No reset for WS
@@ -92,7 +92,7 @@ mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .valid(valid)
 );
 
-// OFIFO signals
+// OFIFO signals (bypassed in OS mode)
 wire ofifo_rd;
 wire [psum_bw*col-1:0] ofifo_in;
 wire [psum_bw*col-1:0] ofifo_out;
@@ -102,7 +102,7 @@ wire ofifo_valid;
 
 assign ofifo_rd = inst[6];
 assign ofifo_in = macArrayOut;
-assign psumIn = (mode_select == 1) ? macArrayOut : ofifo_out; // OS: Direct from MAC, WS: From OFIFO
+assign psumIn = (mode_select == 1) ? macArrayOut : ofifo_out; // OS: Direct MAC output, WS: From OFIFO
 
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .clk(clk),
