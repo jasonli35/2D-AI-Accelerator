@@ -80,7 +80,6 @@ assign inst_q[3]   = l0_rd_q;
 assign inst_q[2]   = l0_wr_q;
 assign inst_q[1]   = execute_q; 
 assign inst_q[0]   = load_q; 
-assign inst_q[7]   = 0;
 
 core #(  .row(row), .col(col), .bw(bw), .psum_bw(psum_bw), .num(num)) core (
 	.clk(clk), 
