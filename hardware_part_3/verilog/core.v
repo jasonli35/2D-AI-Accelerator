@@ -35,14 +35,34 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
+// Intermediate signals for conditional connections
+reg [psum_bw*col-1:0] psum_in_wire;
+reg [psum_bw*col-1:0] sfp_in_wire;
+reg psumMemWEN_cond, psumMemCEN_cond;
+
+// Mode-based assignments
+always @(*) begin
+    if (mode_select == 1) begin // Output Stationary (OS) mode
+        psum_in_wire = psumMemOut;
+        sfp_in_wire = {psum_bw*col{1'b0}};
+        psumMemWEN_cond = psumMemWEN;
+        psumMemCEN_cond = psumMemCEN;
+    end else begin // Weight Stationary (WS) mode
+        psum_in_wire = {psum_bw*col{1'b0}};
+        sfp_in_wire = psumMemOut;
+        psumMemWEN_cond = 1'b1; // Disable writes in WS mode
+        psumMemCEN_cond = 1'b1; // Disable accesses in WS mode
+    end
+end
+
 // --- Instantiate corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .clk(clk),
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(mode_select ? psumMemOut : {psum_bw*col{1'b0}}), // Use psumMemOut only for OS mode
-    .sfpIn(mode_select ? {psum_bw*col{1'b0}} : psumMemOut), // Use sfpIn for WS mode
+    .psumIn(psum_in_wire), // Pass intermediate signal
+    .sfpIn(sfp_in_wire),   // Pass intermediate signal
     .sfpOut(coreOut)
 );
 
@@ -59,8 +79,8 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
 // --- Instantiate PSUM memory ---
 sram_128b_w2048 #(.num(num)) psumMem_instance (
     .CLK(clk),
-    .WEN(mode_select ? psumMemWEN : 1'b1), // Disable writing in WS mode
-    .CEN(mode_select ? psumMemCEN : 1'b1), // Disable accessing in WS mode
+    .WEN(psumMemWEN_cond),
+    .CEN(psumMemCEN_cond),
     .D(coreOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
