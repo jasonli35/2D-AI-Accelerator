@@ -87,7 +87,6 @@ core #(  .row(row), .col(col), .bw(bw), .psum_bw(psum_bw), .num(num)) core (
 	.inst(inst_q),
 	.valid(ofifo_valid),
         .D_xmem(D_xmem_q), 
-		.mode_select(mode_select),
         .coreOut(sfp_out), 
 	.reset(reset)
 ); 
