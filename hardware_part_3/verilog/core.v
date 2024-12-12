@@ -35,25 +35,16 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-// Intermediate signals for conditional connections
-reg [psum_bw*col-1:0] psum_in_wire;
-reg [psum_bw*col-1:0] sfp_in_wire;
-reg psumMemWEN_cond, psumMemCEN_cond;
+// Intermediate wires for conditional connections
+wire [psum_bw*col-1:0] psum_in_wire;
+wire [psum_bw*col-1:0] sfp_in_wire;
+wire psumMemWEN_cond, psumMemCEN_cond;
 
 // Mode-based assignments
-always @(*) begin
-    if (mode_select == 1) begin // Output Stationary (OS) mode
-        psum_in_wire = psumMemOut;
-        sfp_in_wire = {psum_bw*col{1'b0}};
-        psumMemWEN_cond = psumMemWEN;
-        psumMemCEN_cond = psumMemCEN;
-    end else begin // Weight Stationary (WS) mode
-        psum_in_wire = {psum_bw*col{1'b0}};
-        sfp_in_wire = psumMemOut;
-        psumMemWEN_cond = 1'b1; // Disable writes in WS mode
-        psumMemCEN_cond = 1'b1; // Disable accesses in WS mode
-    end
-end
+assign psum_in_wire = (mode_select == 1) ? psumMemOut : {psum_bw*col{1'b0}};
+assign sfp_in_wire = (mode_select == 1) ? {psum_bw*col{1'b0}} : psumMemOut;
+assign psumMemWEN_cond = (mode_select == 1) ? psumMemWEN : 1'b1; // Disable writes in WS mode
+assign psumMemCEN_cond = (mode_select == 1) ? psumMemCEN : 1'b1; // Disable accesses in WS mode
 
 // --- Instantiate corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
