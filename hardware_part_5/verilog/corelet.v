@@ -10,7 +10,8 @@ module corelet #(
     input [bw*row-1:0] coreletIn,
     output [psum_bw*col-1:0] psumIn,
     input [psum_bw*col-1:0] sfpIn,
-    output [psum_bw*col-1:0] sfpOut
+    output [psum_bw*col-1:0] sfpOut,
+    output [psum_bw*col*row-1:0] macTileOutputs // Collect all mac_tile outputs
 );
 
 // Mode selection signal
@@ -79,6 +80,7 @@ assign macArrayIn_n = (mode_select ^ mode_select) ? psumIn : {psum_bw*col{1'b0}}
 wire [bw*row-1:0] macArrayIn;
 assign macArrayIn = (~mode_select & mode_select) ? ififo_out : l0_out;
 
+// Instantiate mac_array with extended output collection
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
     .reset(reset),
@@ -86,7 +88,8 @@ mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .in_w(macArrayIn),
     .inst_w(macArrayInst),
     .in_n(macArrayIn_n),
-    .valid(valid)
+    .valid(valid),
+    .all_outputs(macTileOutputs) // Collect outputs from all mac_tile instances
 );
 
 // OFIFO signals
