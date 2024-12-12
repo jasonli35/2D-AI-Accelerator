@@ -1,4 +1,6 @@
-module mac_tile (clk, out_s, in_w, out_e, in_n, inst_w, inst_e, reset);
+module mac_tile (
+    clk, out_s, in_w, out_e, in_n, inst_w, inst_e, mode_select, reset
+);
 
 parameter bw = 4;
 parameter psum_bw = 16;
@@ -11,6 +13,7 @@ output [1:0] inst_e;
 input  [psum_bw-1:0] in_n;
 input  clk;
 input  reset;
+input  mode_select; // New input for mode selection
 
 reg [1:0] inst_q;
 reg [bw-1:0] a_q;
@@ -18,10 +21,8 @@ reg [bw-1:0] b_q;
 reg [psum_bw-1:0] c_q;
 wire [psum_bw-1:0] mac_out;
 reg load_ready_q;
-wire mode_select;
 
-assign mode_select = inst_w[1]; // Mode select embedded in inst_w[1]
-
+// Instantiate MAC unit
 mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
     .a(a_q), 
     .b(b_q),
@@ -42,11 +43,15 @@ always @ (posedge clk) begin
         c_q <= 0;
     end else begin
         inst_q[1] <= inst_w[1];
-        if (mode_select) begin
-            c_q <= in_n; // OS mode uses input from neighbors
+
+        // Update `c_q` differently based on mode_select
+        if (mode_select == 1) begin
+            c_q <= c_q + in_n; // OS mode: Accumulate with in_n
         end else begin
-            c_q <= 0; // WS mode zeros out the input
+            c_q <= in_n; // WS mode: Normal operation
         end
+
+        // Keep WS logic for loading
         if (inst_w[1] | inst_w[0]) begin
             a_q <= in_w;
         end
