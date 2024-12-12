@@ -6,7 +6,7 @@ module corelet #(
 )(
     input clk,
     input reset,
-    input [34:0] inst,
+    input [33:0] inst,
     input [bw*row-1:0] coreletIn,
     output [psum_bw*col-1:0] psumIn,
     input [psum_bw*col-1:0] sfpIn,
