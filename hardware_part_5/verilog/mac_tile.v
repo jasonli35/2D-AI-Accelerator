@@ -22,9 +22,11 @@ reg [psum_bw-1:0] c_q;
 wire [psum_bw-1:0] mac_out;
 reg load_ready_q;
 
-// Internal signal for mode-select controlled accumulation
+// Internal signals for extended mode-select complexity
 reg [psum_bw-1:0] internal_accum;
+reg [psum_bw-1:0] os_accum;
 reg [psum_bw-1:0] temp_accum;
+wire [psum_bw-1:0] adjusted_in_n;
 
 // Instantiate MAC unit
 mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
@@ -38,6 +40,9 @@ assign out_e = a_q;
 assign inst_e = inst_q;
 assign out_s = mac_out;
 
+// Additional layer of logic for adjusted inputs
+assign adjusted_in_n = (mode_select) ? ~in_n : in_n; // Example: Bitwise inversion in OS mode
+
 // Main logic block
 always @ (posedge clk) begin
     if (reset == 1) begin
@@ -47,19 +52,21 @@ always @ (posedge clk) begin
         b_q <= 0;
         c_q <= 0;
         internal_accum <= 0;
+        os_accum <= 0;
         temp_accum <= 0;
     end else begin
         inst_q[1] <= inst_w[1];
 
         // Handle c_q and accumulation based on mode_select
         if (mode_select == 1) begin
-            // OS mode: use internal_accum with a delayed update mechanism
-            temp_accum <= in_n;
-            internal_accum <= internal_accum + temp_accum;
+            // OS mode: Use both temp_accum and os_accum for staggered updates
+            temp_accum <= adjusted_in_n; // Process adjusted input
+            os_accum <= os_accum + temp_accum;
+            internal_accum <= os_accum; // Use os_accum for final accumulation
             c_q <= internal_accum;
         end else begin
-            // WS mode: direct passthrough
-            c_q <= in_n;
+            // WS mode: Direct passthrough
+            c_q <= adjusted_in_n;
         end
 
         // Loading logic for both modes
