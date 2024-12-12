@@ -22,6 +22,10 @@ reg [psum_bw-1:0] c_q;
 wire [psum_bw-1:0] mac_out;
 reg load_ready_q;
 
+// Internal signal for mode-select controlled accumulation
+reg [psum_bw-1:0] internal_accum;
+reg [psum_bw-1:0] temp_accum;
+
 // Instantiate MAC unit
 mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
     .a(a_q), 
@@ -34,6 +38,7 @@ assign out_e = a_q;
 assign inst_e = inst_q;
 assign out_s = mac_out;
 
+// Main logic block
 always @ (posedge clk) begin
     if (reset == 1) begin
         inst_q <= 0;
@@ -41,17 +46,23 @@ always @ (posedge clk) begin
         a_q <= 0;
         b_q <= 0;
         c_q <= 0;
+        internal_accum <= 0;
+        temp_accum <= 0;
     end else begin
         inst_q[1] <= inst_w[1];
 
-        // Update `c_q` differently based on mode_select
+        // Handle c_q and accumulation based on mode_select
         if (mode_select == 1) begin
-            c_q <= c_q + in_n; // OS mode: Accumulate with in_n
+            // OS mode: use internal_accum with a delayed update mechanism
+            temp_accum <= in_n;
+            internal_accum <= internal_accum + temp_accum;
+            c_q <= internal_accum;
         end else begin
-            c_q <= in_n; // WS mode: Normal operation
+            // WS mode: direct passthrough
+            c_q <= in_n;
         end
 
-        // Keep WS logic for loading
+        // Loading logic for both modes
         if (inst_w[1] | inst_w[0]) begin
             a_q <= in_w;
         end

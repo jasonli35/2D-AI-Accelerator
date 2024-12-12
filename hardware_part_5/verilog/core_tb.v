@@ -342,7 +342,7 @@ initial begin
 
   ////////// Accumulation /////////
   acc_file = $fopen("./files/address/address.txt", "r");
-  out_file = $fopen("./files/output/out.txt", "r");  /// out.txt file stores the address sequence to read out from psum memory for accumulation
+  out_file = $fopen("./files/psum/psum.txt", "r");  /// psum.txt file stores the address sequence to read out from psum memory for accumulation
 
   // Following three lines are to remove the first three comment lines of the file
   out_scan_file = $fscanf(out_file,"%s", answer); 
