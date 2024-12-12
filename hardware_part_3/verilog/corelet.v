@@ -38,17 +38,18 @@ l0 #(.row(row), .bw(bw)) L0_instance (
     .o_ready(l0_ready)
 );
 
-// Instantiate and integrate ififo
+// ififo signals (for OS mode)
 wire [bw*col-1:0] ififo_out;
 wire ififo_full, ififo_empty;
 
+// Instantiate ififo for OS mode
 ififo #(.col(col), .bw(bw)) ififo_instance (
     .clk(clk),
     .reset(reset),
-    .in(coreletIn[col*bw-1:0]), // Input weights from coreletIn
-    .out(ififo_out),           // Output weights to MAC array
-    .rd(inst[5] & (mode_select == 1)), // Read when OS mode and instructed
-    .wr(inst[4] & (mode_select == 1)), // Write when OS mode and instructed
+    .in(coreletIn[bw*col-1:0]), // Input weights
+    .out(ififo_out),           // Output weights
+    .rd(inst[5] & mode_select), // Read when OS mode and inst[5] active
+    .wr(inst[4] & mode_select), // Write when OS mode and inst[4] active
     .o_full(ififo_full),
     .o_empty(ififo_empty)
 );
@@ -63,6 +64,7 @@ assign macArrayInst = inst[1:0];
 
 // Update MAC array inputs
 assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS: psumIn, WS: zeros
+wire [bw*row-1:0] macArrayIn;
 assign macArrayIn = (mode_select == 1) ? ififo_out : l0_out; // OS: weights from ififo, WS: from l0_out
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
@@ -84,7 +86,7 @@ wire ofifo_ready;
 wire ofifo_valid;
 
 assign ofifo_rd = inst[6];
-assign ofifo_in = macArrayOut; // Output from MAC array
+assign ofifo_in = macArrayOut;
 assign psumIn = ofifo_out;
 
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
@@ -118,7 +120,7 @@ for (i = 1; i < col + 1; i = i + 1) begin : sfp_num
         .acc(sfp_acc),
         .relu(sfp_relu),
         .reset(reset),
-        .in(sfp_in[psum_bw * i - 1 : psum_bw * (i - 1)]),
+        .in(sfpIn[psum_bw * i - 1 : psum_bw * (i - 1)]),
         .out(sfp_out[psum_bw * i - 1 : psum_bw * (i - 1)])
     );
 end
