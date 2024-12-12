@@ -41,6 +41,7 @@ l0 #(.row(row), .bw(bw)) L0_instance (
 // ififo signals (for OS mode)
 wire [bw*col-1:0] ififo_out;
 wire ififo_full, ififo_empty;
+reg ififo_rd_enable;
 
 // Instantiate ififo for OS mode
 ififo #(.col(col), .bw(bw)) ififo_instance (
@@ -48,7 +49,7 @@ ififo #(.col(col), .bw(bw)) ififo_instance (
     .reset(reset),
     .in(coreletIn[bw*col-1:0]), // Input weights
     .out(ififo_out),           // Output weights
-    .rd(inst[5] & mode_select), // Read when OS mode and inst[5] active
+    .rd(ififo_rd_enable),       // Read when OS mode
     .wr(inst[4] & mode_select), // Write when OS mode and inst[4] active
     .o_full(ififo_full),
     .o_empty(ififo_empty)
@@ -61,11 +62,22 @@ wire [col-1:0] valid;
 wire [psum_bw*col-1:0] macArrayIn_n;
 
 assign macArrayInst = inst[1:0];
+wire [bw*row-1:0] macArrayIn; // Signal for MAC array input
 
 // Update MAC array inputs
 assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS: psumIn, WS: zeros
-wire [bw*row-1:0] macArrayIn;
 assign macArrayIn = (mode_select == 1) ? ififo_out : l0_out; // OS: weights from ififo, WS: from l0_out
+
+// Manage ififo read looping for OS
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        ififo_rd_enable <= 0;
+    end else if (mode_select == 1) begin
+        ififo_rd_enable <= ~ififo_empty; // Enable read only if not empty
+    end else begin
+        ififo_rd_enable <= 0;
+    end
+end
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
@@ -89,6 +101,9 @@ assign ofifo_rd = inst[6];
 assign ofifo_in = macArrayOut;
 assign psumIn = ofifo_out;
 
+// OS bypasses OFIFO, WS uses it normally
+assign sfpOut = (mode_select == 1) ? macArrayOut : ofifo_out;
+
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .clk(clk),
     .reset(reset),
@@ -104,13 +119,10 @@ ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
 // SFP signals (Only for WS mode)
 wire sfp_acc;
 wire sfp_relu;
-wire [psum_bw*col-1:0] sfp_in;
 wire [psum_bw*col-1:0] sfp_out;
 
 assign sfp_acc = inst[33];
 assign sfp_relu = 0;
-assign sfp_in = ofifo_out; // OFIFO output goes to SFP in WS mode
-assign sfpOut = (mode_select == 1) ? macArrayOut : sfp_out; // OS uses MAC output directly, WS uses SFP
 
 // Instantiate SFP (for WS only)
 genvar i;
