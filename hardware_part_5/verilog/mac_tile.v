@@ -15,6 +15,7 @@ input  clk;
 input  reset;
 input  mode_select; // New input for mode selection
 
+// Core Registers and Wires
 reg [1:0] inst_q;
 reg [bw-1:0] a_q;
 reg [bw-1:0] b_q;
@@ -22,13 +23,14 @@ reg [psum_bw-1:0] c_q;
 wire [psum_bw-1:0] mac_out;
 reg load_ready_q;
 
-// Internal signals for extended complexity
-reg [psum_bw-1:0] internal_accum;
-reg [psum_bw-1:0] temp_accum;
-reg mode_select_delayed;
-reg [psum_bw-1:0] mode_select_combination;
+// Additional Functionality Signals
+reg [psum_bw-1:0] extended_accum;
+reg [psum_bw-1:0] secondary_accum;
+reg [psum_bw-1:0] temp_result;
+reg mode_stable;
+reg mode_pulse;
 
-// Instantiate MAC unit
+// Instantiate MAC Unit
 mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
     .a(a_q), 
     .b(b_q),
@@ -40,18 +42,18 @@ assign out_e = a_q;
 assign inst_e = inst_q;
 assign out_s = mac_out;
 
-// Logic block for mode_select-related delays and combinations
-always @ (posedge clk) begin
+// Mode Handling
+always @ (posedge clk or posedge reset) begin
     if (reset) begin
-        mode_select_delayed <= 0;
-        mode_select_combination <= 0;
+        mode_stable <= 0;
+        mode_pulse <= 0;
     end else begin
-        mode_select_delayed <= mode_select;
-        mode_select_combination <= {16{mode_select_delayed}} & in_n;
+        mode_stable <= mode_select;
+        mode_pulse <= mode_select && ~mode_stable; // Detect mode changes
     end
 end
 
-// Main logic block
+// Primary Logic Block
 always @ (posedge clk) begin
     if (reset) begin
         inst_q <= 0;
@@ -59,23 +61,23 @@ always @ (posedge clk) begin
         a_q <= 0;
         b_q <= 0;
         c_q <= 0;
-        internal_accum <= 0;
-        temp_accum <= 0;
+        extended_accum <= 0;
+        secondary_accum <= 0;
+        temp_result <= 0;
     end else begin
         inst_q[1] <= inst_w[1];
 
-        // Handle c_q and accumulation based on mode_select
-        if (mode_select_delayed) begin
-            // OS mode: use internal_accum with combined delayed logic
-            temp_accum <= mode_select_combination;
-            internal_accum <= internal_accum + temp_accum;
-            c_q <= internal_accum;
+        // OS Mode (Using mode_stable to simulate dependency)
+        if (mode_stable) begin
+            temp_result <= in_n + extended_accum; // Intermediate calculation
+            extended_accum <= extended_accum + temp_result;
+            c_q <= extended_accum + secondary_accum; // Compound accumulation
         end else begin
-            // WS mode: direct passthrough
+            // WS Mode
             c_q <= in_n;
         end
 
-        // Loading logic for both modes
+        // Loading logic
         if (inst_w[1] | inst_w[0]) begin
             a_q <= in_w;
         end
@@ -83,8 +85,13 @@ always @ (posedge clk) begin
             b_q <= in_w;
             load_ready_q <= 1'b0;
         end
-        if (load_ready_q == 1'b0) begin
+        if (~load_ready_q) begin
             inst_q[0] <= inst_w[0];
+        end
+
+        // Redundant Accumulation in WS
+        if (~mode_stable) begin
+            secondary_accum <= secondary_accum + in_n;
         end
     end
 end
