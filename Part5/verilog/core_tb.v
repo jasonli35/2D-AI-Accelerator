@@ -109,7 +109,7 @@ initial begin
 	$dumpfile("core_tb.vcd");
 	$dumpvars(0,core_tb);
 
-	x_file = $fopen(“../sim/activation.txt", "r");
+	x_file = $fopen("../sim/activation.txt", "r");
   	// Following three lines are to remove the first three comment lines of the file
   	x_scan_file = $fscanf(x_file,"%s", captured_data);
   	x_scan_file = $fscanf(x_file,"%s", captured_data);
@@ -147,13 +147,13 @@ initial begin
 
 	for (kij=0; kij<9; kij=kij+1) begin  // kij loop
 	case(kij)
-		0: w_file_name = “../sim/weight_kij0.txt";
+		0: w_file_name = "../sim/weight_kij0.txt";
 		1: w_file_name = "../sim/weight_kij1.txt";
 		2: w_file_name = "../sim/weight_kij2.txt";
 		3: w_file_name = "../sim/weight_kij3.txt";
 		4: w_file_name = "../sim/weight_kij4.txt";
 	        5: w_file_name = "../sim/weight_kij5.txt";
-		6: w_file_name = ".../sim/weight_kij6.txt";
+		6: w_file_name = "../sim/weight_kij6.txt";
 		7: w_file_name = "../sim/weight_kij7.txt";
 		8: w_file_name = "../sim/weight_kij8.txt";
     	endcase
