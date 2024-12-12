@@ -10,7 +10,7 @@ module mac_row (clk, out_s, in_w, in_n, valid, inst_w, reset, mode_sel);
     input [bw-1:0] in_w; // inst[1]:execute, inst[0]: kernel loading
     input [1:0] inst_w;
     input [psum_bw*col-1:0] in_n;
-    input mode_sel;
+    input mode_select;
 
     wire [(col+1)*bw-1:0] temp_in;
     wire [(col+1)*2-1:0] temp_inst;
