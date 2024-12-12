@@ -400,8 +400,8 @@ initial begin
   if (error == 0) begin
   	$display("############ No error detected ##############"); 
   	$display("########### Project Completed !! ############");
-	if (mode_select == 0) $display("########### WS mode ############\nChange mode_select to 1 to test OS mode");
-	else $display("########### OS mode ############\nChange mode_select to 0 to test WS mode");
+	if (mode_select == 0) $display("########### WS mode verification passed ############\nChange mode_select to 1 to test OS mode");
+	else $display("########### OS mode verification passed ############\nChange mode_select to 0 to test WS mode");
 
 
   end

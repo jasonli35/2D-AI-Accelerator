@@ -22,6 +22,9 @@ reg [psum_bw-1:0] c_q;
 wire [psum_bw-1:0] mac_out;
 reg load_ready_q;
 
+// Intermediate register for OS-specific accumulation
+reg [psum_bw-1:0] os_accum;
+
 // Instantiate MAC unit
 mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
     .a(a_q), 
@@ -34,6 +37,7 @@ assign out_e = a_q;
 assign inst_e = inst_q;
 assign out_s = mac_out;
 
+// WS logic and general operations
 always @ (posedge clk) begin
     if (reset == 1) begin
         inst_q <= 0;
@@ -41,15 +45,9 @@ always @ (posedge clk) begin
         a_q <= 0;
         b_q <= 0;
         c_q <= 0;
+        os_accum <= 0;
     end else begin
         inst_q[1] <= inst_w[1];
-
-        // Update `c_q` differently based on mode_select
-        if (mode_select == 1) begin
-            c_q <= c_q + in_n; // OS mode: Accumulate with in_n
-        end else begin
-            c_q <= in_n; // WS mode: Normal operation
-        end
 
         // Keep WS logic for loading
         if (inst_w[1] | inst_w[0]) begin
@@ -62,6 +60,22 @@ always @ (posedge clk) begin
         if (load_ready_q == 1'b0) begin
             inst_q[0] <= inst_w[0];
         end
+
+        // Handle c_q update in WS mode
+        if (mode_select == 0) begin
+            c_q <= in_n; // WS mode: Normal operation
+        end
+    end
+end
+
+// OS specific logic
+always @ (posedge clk) begin
+    if (reset == 1) begin
+        os_accum <= 0;
+    end else if (mode_select == 1) begin
+        // OS mode: Accumulate 
+        os_accum <= os_accum + in_n;
+        c_q <= os_accum; // Update c_q from os_accum
     end
 end
 
