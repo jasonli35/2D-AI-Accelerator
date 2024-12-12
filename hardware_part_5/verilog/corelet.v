@@ -69,6 +69,7 @@ always @(posedge clk or posedge reset) begin
     end
 end
 
+
 // MAC array signals
 wire [psum_bw*col-1:0] macArrayOut;
 wire [1:0] macArrayInst;
