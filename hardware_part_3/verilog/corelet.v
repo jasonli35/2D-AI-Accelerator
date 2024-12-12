@@ -71,7 +71,7 @@ wire ofifo_ready;
 wire ofifo_valid;
 
 assign ofifo_rd = inst[6];
-assign ofifo_in = macArrayOut;
+assign ofifo_in = (mode_select == 1) ? macArrayOut : sfpIn; // OS uses macArrayOut; WS uses sfpIn
 assign psumIn = ofifo_out;
 
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
