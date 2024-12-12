@@ -41,6 +41,7 @@ l0 #(.row(row), .bw(bw)) L0_instance (
 // ififo signals (for OS mode)
 wire [bw*col-1:0] ififo_out;
 wire ififo_full, ififo_empty;
+reg ififo_rd_enable;
 
 // Instantiate ififo for OS mode
 ififo #(.col(col), .bw(bw)) ififo_instance (
@@ -48,11 +49,23 @@ ififo #(.col(col), .bw(bw)) ififo_instance (
     .reset(reset),
     .in(coreletIn[bw*col-1:0]), // Input weights
     .out(ififo_out),           // Output weights
-    .rd(inst[5] & mode_select), // Read when OS mode and inst[5] active
+    .rd(ififo_rd_enable),       // Read control
     .wr(inst[4] & mode_select), // Write when OS mode and inst[4] active
     .o_full(ififo_full),
     .o_empty(ififo_empty)
 );
+
+// Enable looping for `ififo` in OS mode
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        ififo_rd_enable <= 0; // Disable reading initially
+    end else if (mode_select == 1) begin
+        // Enable reading as long as `ififo` is not empty
+        ififo_rd_enable <= ~ififo_empty;
+    end else begin
+        ififo_rd_enable <= 0; // Disable for WS
+    end
+end
 
 // MAC array signals
 wire [psum_bw*col-1:0] macArrayOut;
