@@ -47,7 +47,6 @@ corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_inst (
     .psumIn(ofifoOut),  // Existing connection
     .sfpIn(psumMemOut), // Existing connection
     .sfpOut(coreOut),
-    .mode_select(mode_select) // Pass mode_select (currently unused)
 );
 
 // Instantiate XMem
