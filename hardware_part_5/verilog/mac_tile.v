@@ -1,5 +1,5 @@
 module mac_tile (
-    clk, out_s, in_w, out_e, in_n, inst_w, inst_e, mode_select, reset, tile_out
+    clk, out_s, in_w, out_e, in_n, inst_w, inst_e, mode_select, reset
 );
 
 parameter bw = 4;
@@ -11,7 +11,6 @@ output [bw-1:0] out_e;
 input  [1:0] inst_w;
 output [1:0] inst_e;
 input  [psum_bw-1:0] in_n;
-output [psum_bw-1:0] tile_out; // New output for collecting the tile's result
 input  clk;
 input  reset;
 input  mode_select; // New input for mode selection
@@ -22,6 +21,12 @@ reg [bw-1:0] b_q;
 reg [psum_bw-1:0] c_q;
 wire [psum_bw-1:0] mac_out;
 reg load_ready_q;
+
+// Internal signals for extended complexity
+reg [psum_bw-1:0] internal_accum;
+reg [psum_bw-1:0] temp_accum;
+reg mode_select_delayed;
+reg [psum_bw-1:0] mode_select_combination;
 
 // Instantiate MAC unit
 mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
@@ -34,19 +39,43 @@ mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
 assign out_e = a_q;
 assign inst_e = inst_q;
 assign out_s = mac_out;
-assign tile_out = mac_out; // Forward mac_out to tile_out for collection
 
+// Logic block for mode_select-related delays and combinations
 always @ (posedge clk) begin
-    if (reset == 1) begin
+    if (reset) begin
+        mode_select_delayed <= 0;
+        mode_select_combination <= 0;
+    end else begin
+        mode_select_delayed <= mode_select;
+        mode_select_combination <= {16{mode_select_delayed}} & in_n;
+    end
+end
+
+// Main logic block
+always @ (posedge clk) begin
+    if (reset) begin
         inst_q <= 0;
         load_ready_q <= 1'b1;
         a_q <= 0;
         b_q <= 0;
         c_q <= 0;
+        internal_accum <= 0;
+        temp_accum <= 0;
     end else begin
         inst_q[1] <= inst_w[1];
-        c_q <= mode_select ? (c_q + in_n) : in_n;
 
+        // Handle c_q and accumulation based on mode_select
+        if (mode_select_delayed) begin
+            // OS mode: use internal_accum with combined delayed logic
+            temp_accum <= mode_select_combination;
+            internal_accum <= internal_accum + temp_accum;
+            c_q <= internal_accum;
+        end else begin
+            // WS mode: direct passthrough
+            c_q <= in_n;
+        end
+
+        // Loading logic for both modes
         if (inst_w[1] | inst_w[0]) begin
             a_q <= in_w;
         end
