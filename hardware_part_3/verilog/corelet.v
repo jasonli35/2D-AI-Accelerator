@@ -6,7 +6,7 @@ module corelet #(
 )(
     input clk,
     input reset,
-    input [34:0] inst, // Expanded to include mode_select
+    input [34:0] inst, // Includes mode_select
     input [bw*row-1:0] coreletIn,
     output [psum_bw*col-1:0] psumIn,
     input [psum_bw*col-1:0] sfpIn,
@@ -15,7 +15,7 @@ module corelet #(
 
 // Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // Pass-through only, no logic changes for WS
+assign mode_select = inst[34]; // Pass mode_select
 
 // L0 signals
 wire l0_wr;
@@ -38,24 +38,24 @@ l0 #(.row(row), .bw(bw)) L0_instance (
     .o_ready(l0_ready)
 );
 
+// MAC array signals
 wire [psum_bw*col-1:0] macArrayOut;
 wire [1:0] macArrayInst;
 wire [col-1:0] valid;
-wire [psum_bw*col-1:0] macArrayIn_n;
+wire [psum_bw*col-1:0] macArrayIn;
 
-// Updated logic for OS mode
-assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS uses psumIn; WS uses zeros
-
+// Conditional input to the MAC array based on mode_select
 assign macArrayInst = inst[1:0];
-assign macArrayIn = l0_out;
+assign macArrayIn = (mode_select == 1) ? sfpIn : l0_out;
 
+// MAC array instance
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
     .reset(reset),
     .out_s(macArrayOut),
-    .in_w(l0_out),
+    .in_w(macArrayIn),
     .inst_w(macArrayInst),
-    .in_n(macArrayIn_n),
+    .in_n({psum_bw*col{1'b0}}), // Placeholder, can be updated for specific behavior
     .valid(valid)
 );
 
@@ -83,11 +83,14 @@ ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .o_valid(ofifo_valid)
 );
 
+// SFP signals
 wire sfp_acc;
 wire sfp_relu;
 wire [psum_bw*col-1:0] sfp_in;
 wire [psum_bw*col-1:0] sfp_out;
 
+// Conditional input to SFP based on mode_select
+assign sfp_in = (mode_select == 1) ? macArrayOut : ofifo_out;
 assign sfp_acc = inst[33];
 assign sfp_relu = 0;
 assign sfpOut = sfp_out;
@@ -100,7 +103,7 @@ for (i = 1; i < col + 1; i = i + 1) begin : sfp_num
         .acc(sfp_acc),
         .relu(sfp_relu),
         .reset(reset),
-        .in(sfpIn[psum_bw * i - 1 : psum_bw * (i - 1)]),
+        .in(sfp_in[psum_bw * i - 1 : psum_bw * (i - 1)]),
         .out(sfp_out[psum_bw * i - 1 : psum_bw * (i - 1)])
     );
 end
