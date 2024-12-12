@@ -6,28 +6,26 @@ module core #(
     parameter num = 2048
 )(
     input clk,
-    input reset,
+    input reset, 
     input [33:0] inst,
     input [bw*row-1:0] D_xmem,
     output valid,
     output [psum_bw*col-1:0] coreOut
 );
 
-// Mode select signal
-wire mode_select;
-assign mode_select = inst[7]; // 0 = Weight Stationary (WS), 1 = Output Stationary (OS)
+wire [psum_bw*col-1:0] ofifoOut;
 
-// Signals for XMem
-wire xMemWEN, xMemCEN;
-wire [10:0] xMemAddress;
+wire xMemWEN;
+wire xMemCEN;
+wire [10:0]xMemAddress;
 wire [bw*row-1:0] xMemOut;
 
 assign xMemCEN = inst[19];
 assign xMemWEN = inst[18];
 assign xMemAddress = inst[17:7];
 
-// Signals for PSUM memory (used in OS mode)
-wire psumMemWEN, psumMemCEN;
+wire psumMemWEN;
+wire psumMemCEN;
 wire [psum_bw*col-1:0] psumMemOut;
 wire [10:0] psumMemAddress;
 
@@ -35,27 +33,18 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-// PSUM conditional signals for mode selection
-wire [psum_bw*col-1:0] psumIn_wire;
-wire psumMemWEN_cond, psumMemCEN_cond;
-
-assign psumIn_wire = mode_select ? psumMemOut : {psum_bw*col{1'b0}}; // Use PSUM in OS mode, otherwise zero
-assign psumMemWEN_cond = mode_select ? psumMemWEN : 1'b1;            // Disable writes to PSUM in WS mode
-assign psumMemCEN_cond = mode_select ? psumMemCEN : 1'b1;            // Disable access to PSUM in WS mode
-
-// --- Instantiate corelet ---
-corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
+//Instantiate corelet
+corelet #(.row(row),.col(col),.psum_bw(psum_bw),.bw(bw)) corelet (
     .clk(clk),
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(psumIn_wire), // Conditional PSUM input
-    .sfpIn({psum_bw*col{1'b0}}), // No SFP for WS (set to zero)
+    .psumIn(ofifoOut),
+    .sfpIn(psumMemOut),
     .sfpOut(coreOut)
 );
 
-// --- Instantiate XMem ---
-sram_32b_w2048 #(.num(num)) xMem_instance (
+sram_32b_w2048 #(.num(num)) xMem (
     .CLK(clk),
     .WEN(xMemWEN),
     .CEN(xMemCEN),
@@ -64,12 +53,11 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
     .Q(xMemOut)
 );
 
-// --- Instantiate PSUM memory ---
-sram_128b_w2048 #(.num(num)) psumMem_instance (
+sram_128b_w2048 #(.num(num)) psumMem (
     .CLK(clk),
-    .WEN(psumMemWEN_cond),
-    .CEN(psumMemCEN_cond),
-    .D(coreOut),
+    .WEN(psumMemWEN),
+    .CEN(psumMemCEN),
+    .D(ofifoOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
 );
