@@ -6,28 +6,28 @@ module core #(
     parameter num = 2048
 )(
     input clk,
-    input reset, 
+    input reset,
     input [34:0] inst,
     input [bw*row-1:0] D_xmem,
     output valid,
     output [psum_bw*col-1:0] coreOut
 );
 
-// Mode selection signal
+// Mode select signal
 wire mode_select;
 assign mode_select = inst[34]; // Use inst[34] as mode_select (0 = WS, 1 = OS)
 
-wire [psum_bw*col-1:0] ofifoOut;
-
+// Signals for XMem
 wire xMemWEN;
 wire xMemCEN;
-wire [10:0]xMemAddress;
+wire [10:0] xMemAddress;
 wire [bw*row-1:0] xMemOut;
 
 assign xMemCEN = inst[19];
 assign xMemWEN = inst[18];
 assign xMemAddress = inst[17:7];
 
+// Signals for PSUM memory
 wire psumMemWEN;
 wire psumMemCEN;
 wire [psum_bw*col-1:0] psumMemOut;
@@ -38,12 +38,12 @@ assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
 // Signals for conditional connections
-wire [psum_bw*col-1:0] psumIn;
-wire [psum_bw*col-1:0] sfpIn;
+wire [psum_bw*col-1:0] psumInSignal;
+wire [psum_bw*col-1:0] sfpInSignal;
 
-// Conditional assignments based on mode_select
-assign psumIn = (mode_select == 1) ? psumMemOut : {psum_bw*col{1'b0}}; // OS uses psumMemOut, WS uses zero
-assign sfpIn = (mode_select == 0) ? psumMemOut : {psum_bw*col{1'b0}}; // WS uses psumMemOut, OS uses zero
+// Assign psumIn and sfpIn based on mode_select
+assign psumInSignal = (mode_select) ? psumMemOut : {psum_bw*col{1'b0}};
+assign sfpInSignal = (mode_select) ? {psum_bw*col{1'b0}} : psumMemOut;
 
 // Instantiate corelet
 corelet #(
@@ -56,8 +56,8 @@ corelet #(
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(psumIn),
-    .sfpIn(sfpIn),
+    .psumIn(psumInSignal),
+    .sfpIn(sfpInSignal),
     .sfpOut(coreOut)
 );
 
