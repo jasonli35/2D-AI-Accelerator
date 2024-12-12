@@ -37,18 +37,34 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-//Instantiate corelet
-corelet #(.row(row),.col(col),.psum_bw(psum_bw),.bw(bw)) corelet (
+// Signals for conditional connections
+wire [psum_bw*col-1:0] psumIn;
+wire [psum_bw*col-1:0] sfpIn;
+
+// Conditional assignments based on mode_select
+assign psumIn = (mode_select == 1) ? psumMemOut : {psum_bw*col{1'b0}}; // OS uses psumMemOut, WS uses zero
+assign sfpIn = (mode_select == 0) ? psumMemOut : {psum_bw*col{1'b0}}; // WS uses psumMemOut, OS uses zero
+
+// Instantiate corelet
+corelet #(
+    .row(row),
+    .col(col),
+    .psum_bw(psum_bw),
+    .bw(bw)
+) corelet_inst (
     .clk(clk),
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(ofifoOut),
-    .sfpIn(psumMemOut),
+    .psumIn(psumIn),
+    .sfpIn(sfpIn),
     .sfpOut(coreOut)
 );
 
-sram_32b_w2048 #(.num(num)) xMem (
+// Instantiate XMem
+sram_32b_w2048 #(
+    .num(num)
+) xMem_inst (
     .CLK(clk),
     .WEN(xMemWEN),
     .CEN(xMemCEN),
@@ -57,11 +73,14 @@ sram_32b_w2048 #(.num(num)) xMem (
     .Q(xMemOut)
 );
 
-sram_128b_w2048 #(.num(num)) psumMem (
+// Instantiate PSUM memory
+sram_128b_w2048 #(
+    .num(num)
+) psumMem_inst (
     .CLK(clk),
-    .WEN(psumMemWEN),
-    .CEN(psumMemCEN),
-    .D(ofifoOut),
+    .WEN(mode_select ? psumMemWEN : 1'b1), // Disable writes in WS mode
+    .CEN(mode_select ? psumMemCEN : 1'b1), // Disable access in WS mode
+    .D(coreOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
 );
