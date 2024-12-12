@@ -14,9 +14,8 @@ module core #(
 );
 
 // Mode select signal (inst[7])
-// For now, we explicitly acknowledge it but do nothing with it.
 wire mode_select;
-assign mode_select = inst[7]; // 0 = WS (Weight Stationary), 1 = OS (Output Stationary)
+assign mode_select = inst[7]; // 0 = Weight Stationary (WS), 1 = Output Stationary (OS)
 
 // --- Signals for XMem ---
 wire xMemWEN, xMemCEN;
@@ -36,14 +35,18 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
+// Zero-filled wire for unused connections
+wire [psum_bw*col-1:0] zero_fill;
+assign zero_fill = {psum_bw*col{1'b0}};
+
 // --- Instantiate Corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .clk(clk),
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn({psum_bw*col{1'b0}}), // Hardcoded zero for now
-    .sfpIn({psum_bw*col{1'b0}}),  // Hardcoded zero for now
+    .psumIn(zero_fill), // Zero for WS mode
+    .sfpIn(zero_fill),  // Zero for WS mode
     .sfpOut(coreOut)
 );
 
