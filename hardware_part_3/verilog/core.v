@@ -35,19 +35,14 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-wire [psum_bw*col-1:0] psumIn_wire;
-
-// Use an internal wire for conditional assignment
-assign psumIn_wire = (mode_select == 'sd1) ? psumMemOut : 'sd0;
-
 // --- Instantiate corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .clk(clk),
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(psumIn_wire),  // Connect the wire instead of direct conditional logic
-    .sfpIn(psumMemOut),
+    .psumIn((mode_select) ? psumMemOut : {psum_bw*col{1'b0}}), // Pass psumMemOut in OS mode, else zeros
+    .sfpIn((!mode_select) ? psumMemOut : {psum_bw*col{1'b0}}), // Pass psumMemOut in WS mode, else zeros
     .sfpOut(coreOut)
 );
 
@@ -61,11 +56,11 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
     .Q(xMemOut)
 );
 
-// --- Instantiate psumMem (conditionally used in OS mode) ---
+// --- Instantiate psumMem ---
 sram_128b_w2048 #(.num(num)) psumMem_instance (
     .CLK(clk),
-    .WEN((mode_select == 1) ? psumMemWEN : 1), // Disable writing when not in OS mode
-    .CEN((mode_select == 1) ? psumMemCEN : 1), // Disable access when not in OS mode
+    .WEN((mode_select) ? psumMemWEN : 1'b1), // Enable writing only in OS mode
+    .CEN((mode_select) ? psumMemCEN : 1'b1), // Enable only in OS mode
     .D(coreOut),
     .A(psumMemAddress),
     .Q(psumMemOut)

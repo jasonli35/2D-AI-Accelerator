@@ -1,4 +1,4 @@
-module mac_tile (clk, out_s, in_w, out_e, in_n, inst_w, inst_e, reset, mode_sel);
+module mac_tile (clk, out_s, in_w, out_e, in_n, inst_w, inst_e, reset);
 
 parameter bw = 4;
 parameter psum_bw = 16;
@@ -11,7 +11,6 @@ output [1:0] inst_e;
 input  [psum_bw-1:0] in_n;
 input  clk;
 input  reset;
-input  mode_sel; // New input for mode select
 
 reg [1:0] inst_q;
 reg [bw-1:0] a_q;
@@ -24,12 +23,12 @@ mac #(.bw(bw), .psum_bw(psum_bw)) mac_instance (
     .a(a_q), 
     .b(b_q),
     .c(c_q),
-    .out(mac_out)
+	.out(mac_out)
 );
 
 assign out_e = a_q;
 assign inst_e = inst_q;
-assign out_s = (mode_sel) ? c_q : mac_out; // Output logic based on mode_sel
+assign out_s = mac_out;
 
 always @ (posedge clk) begin
 	if (reset == 1) begin
@@ -38,7 +37,8 @@ always @ (posedge clk) begin
 		a_q <= 0;
 		b_q <= 0;
 		c_q <= 0;
-	end else begin
+	end
+	else begin
 		inst_q[1] <= inst_w[1];
 		c_q <= in_n;
 		if (inst_w[1] | inst_w[0]) begin
