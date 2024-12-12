@@ -13,9 +13,9 @@ module corelet #(
     output [psum_bw*col-1:0] sfpOut
 );
 
-// Mode selection signal (added but unused for now)
+// Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // Pass-through only, no logic changes
+assign mode_select = inst[34]; // 0 = WS, 1 = OS
 
 // L0 signals
 wire l0_wr;
@@ -65,6 +65,7 @@ wire ofifo_full;
 wire ofifo_ready;
 wire ofifo_valid;
 
+// Modify OFIFO write enable based on mode_select
 assign ofifo_rd = inst[6];
 assign ofifo_in = macArrayOut;
 assign psumIn = ofifo_out;
@@ -72,7 +73,7 @@ assign psumIn = ofifo_out;
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .clk(clk),
     .reset(reset),
-    .wr(valid),
+    .wr(mode_select ? 1'b0 : valid), // Disable writes in OS mode (mode_select = 1)
     .rd(ofifo_rd),
     .in(ofifo_in),
     .out(ofifo_out),
