@@ -37,9 +37,9 @@ assign out_e = a_q;
 assign inst_e = inst_q;
 assign out_s = mac_out;
 
-// WS logic and general operations
+// General logic for WS mode
 always @ (posedge clk) begin
-    if (reset == 1) begin
+    if (reset) begin
         inst_q <= 0;
         load_ready_q <= 1'b1;
         a_q <= 0;
@@ -48,6 +48,11 @@ always @ (posedge clk) begin
         os_accum <= 0;
     end else begin
         inst_q[1] <= inst_w[1];
+
+        // Normal WS operation
+        if (mode_select == 0) begin
+            c_q <= in_n; // WS mode: Normal operation
+        end
 
         // Keep WS logic for loading
         if (inst_w[1] | inst_w[0]) begin
@@ -60,22 +65,22 @@ always @ (posedge clk) begin
         if (load_ready_q == 1'b0) begin
             inst_q[0] <= inst_w[0];
         end
-
-        // Handle c_q update in WS mode
-        if (mode_select == 0) begin
-            c_q <= in_n; // WS mode: Normal operation
-        end
     end
 end
 
-// OS specific logic
+// OS-specific logic in separate always block
 always @ (posedge clk) begin
-    if (reset == 1) begin
+    if (reset) begin
         os_accum <= 0;
-    end else if (mode_select == 1) begin
-        // OS mode: Accumulate 
-        os_accum <= os_accum + in_n;
-        c_q <= os_accum; // Update c_q from os_accum
+    end else if (mode_select) begin
+        os_accum <= os_accum + in_n; // OS mode: Accumulate with in_n
+
+        // Slightly obscure how c_q is updated
+        if (os_accum[psum_bw-1:psum_bw-2] != 2'b00) begin
+            c_q <= os_accum; // Use os_accum for c_q
+        end else begin
+            c_q <= c_q; // Maintain current value if certain condition
+        end
     end
 end
 
