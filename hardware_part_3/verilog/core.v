@@ -16,7 +16,7 @@ module core #(
 
 // Mode select signal (inst[7])
 wire mode_select;
-assign mode_select = inst[34]; // Use an unused bit (e.g., inst[34])
+assign mode_select = inst[33]; // Use an unused bit (e.g., inst[34])
 
 // --- Signals for XMem ---
 wire xMemWEN, xMemCEN;
