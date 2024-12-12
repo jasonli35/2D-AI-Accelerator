@@ -6,7 +6,7 @@ module corelet #(
 )(
     input clk,
     input reset,
-    input [34:0] inst, // Includes mode_select
+    input [34:0] inst, // Expanded to include mode_select
     input [bw*row-1:0] coreletIn,
     output [psum_bw*col-1:0] psumIn,
     input [psum_bw*col-1:0] sfpIn,
@@ -15,7 +15,7 @@ module corelet #(
 
 // Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // Pass mode_select
+assign mode_select = inst[34]; // Pass-through only
 
 // L0 signals
 wire l0_wr;
@@ -42,20 +42,21 @@ l0 #(.row(row), .bw(bw)) L0_instance (
 wire [psum_bw*col-1:0] macArrayOut;
 wire [1:0] macArrayInst;
 wire [col-1:0] valid;
-wire [psum_bw*col-1:0] macArrayIn;
+wire [row*bw-1:0] macArrayIn_w;
+wire [psum_bw*col-1:0] macArrayIn_n;
 
-// Conditional input to the MAC array based on mode_select
+// Conditional input to the MAC array
 assign macArrayInst = inst[1:0];
-assign macArrayIn = (mode_select == 1) ? sfpIn[bw * row - 1 : 0] : l0_out;
+assign macArrayIn_w = (mode_select == 1) ? sfpIn[row*bw-1:0] : l0_out; // OS uses sfpIn, WS uses l0_out
+assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS uses psumIn, WS uses zero
 
-// MAC array instance
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
     .reset(reset),
     .out_s(macArrayOut),
-    .in_w(macArrayIn),
+    .in_w(macArrayIn_w),
     .inst_w(macArrayInst),
-    .in_n({psum_bw*col{1'b0}}), // Placeholder, can be updated for specific behavior
+    .in_n(macArrayIn_n),
     .valid(valid)
 );
 
@@ -89,10 +90,11 @@ wire sfp_relu;
 wire [psum_bw*col-1:0] sfp_in;
 wire [psum_bw*col-1:0] sfp_out;
 
-// Conditional input to SFP based on mode_select
-assign sfp_in = (mode_select == 1) ? macArrayOut : ofifo_out;
 assign sfp_acc = inst[33];
 assign sfp_relu = 0;
+
+// Conditional input to SFP
+assign sfp_in = (mode_select == 1) ? macArrayOut : ofifo_out; // OS uses macArrayOut, WS uses ofifo_out
 assign sfpOut = sfp_out;
 
 // Instantiate SFP
