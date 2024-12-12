@@ -32,6 +32,7 @@ wire [10:0] psumMemAddress;
 assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
+assign mode_select = inst[34];
 
 //Instantiate corelet
 corelet #(.row(row),.col(col),.psum_bw(psum_bw),.bw(bw)) corelet (
