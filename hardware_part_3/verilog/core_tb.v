@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 module core_tb;
-
+reg mode_select;
 parameter bw = 4;
 parameter psum_bw = 16;
 parameter len_kij = 9;
@@ -80,7 +80,7 @@ assign inst_q[3]   = l0_rd_q;
 assign inst_q[2]   = l0_wr_q;
 assign inst_q[1]   = execute_q; 
 assign inst_q[0]   = load_q; 
-assign inst_q[34] = 0;
+assign inst_q[34] = mode_select;
 
 core #(  .row(row), .col(col), .bw(bw), .psum_bw(psum_bw), .num(num)) core (
 	.clk(clk), 
@@ -92,7 +92,7 @@ core #(  .row(row), .col(col), .bw(bw), .psum_bw(psum_bw), .num(num)) core (
 ); 
 
 initial begin 
-
+	mode_select = 0;
 	inst_w   = 0; 
 	D_xmem   = 0;
 	CEN_xmem = 1;
