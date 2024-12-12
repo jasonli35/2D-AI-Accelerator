@@ -7,7 +7,7 @@ module core #(
 )(
     input clk,
     input reset,
-    input [33:0] inst,
+    input [34:0] inst,
     input [bw*row-1:0] D_xmem,
     input mode_select,
     output valid,
