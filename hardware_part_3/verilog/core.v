@@ -31,8 +31,8 @@ wire psumMemWEN, psumMemCEN;
 wire [psum_bw*col-1:0] psumMemOut;
 wire [10:0] psumMemAddress;
 
-assign psumMemWEN = inst[31];
-assign psumMemCEN = inst[32];
+assign psumMemWEN = mode_select ? 1'b1 : inst[31]; // Disable writing in OS mode
+assign psumMemCEN = mode_select ? 1'b1 : inst[32]; // Disable accessing in OS mode
 assign psumMemAddress = inst[30:20];
 
 // Corelet instantiation
@@ -59,8 +59,8 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
 // PSUM memory instantiation
 sram_128b_w2048 #(.num(num)) psumMem_instance (
     .CLK(clk),
-    .WEN(mode_select ? 1 : psumMemWEN), // Disable writing in OS mode
-    .CEN(mode_select ? 1 : psumMemCEN), // Disable accessing in OS mode
+    .WEN(psumMemWEN),
+    .CEN(psumMemCEN),
     .D(coreOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
