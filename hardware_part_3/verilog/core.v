@@ -13,10 +13,11 @@ module core #(
     output [psum_bw*col-1:0] coreOut
 );
 
-// Mode selection signal
+// Mode selection signal (added but unused)
 wire mode_select;
 assign mode_select = inst[34]; // Use inst[34] as mode_select (0 = WS, 1 = OS)
 
+// Existing signals
 wire [psum_bw*col-1:0] ofifoOut;
 
 wire xMemWEN;
@@ -43,10 +44,10 @@ corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_inst (
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(ofifoOut),
-    .sfpIn(psumMemOut),
+    .psumIn(ofifoOut),  // Existing connection
+    .sfpIn(psumMemOut), // Existing connection
     .sfpOut(coreOut),
-    .mode_select(mode_select) // Pass mode_select to corelet
+    .mode_select(mode_select) // Pass mode_select (currently unused)
 );
 
 // Instantiate XMem
