@@ -63,9 +63,9 @@ wire [psum_bw*col-1:0] macArrayIn_n;
 assign macArrayInst = inst[1:0];
 
 // Update MAC array inputs
-assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS: psumIn, WS: zeros
+assign macArrayIn_n = (mode_select ? {psum_bw*col{1'b0}} : {psum_bw*col{1'b0}}); // Always zeros
 wire [bw*row-1:0] macArrayIn;
-assign macArrayIn = (mode_select == 1) ? ififo_out : l0_out; // OS: weights from ififo, WS: from l0_out
+assign macArrayIn = (mode_select ? l0_out : l0_out); // Always l0_out
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
