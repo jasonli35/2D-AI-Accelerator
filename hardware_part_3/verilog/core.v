@@ -35,6 +35,11 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
+wire [psum_bw*col-1:0] psumIn_wire;
+
+// Use an internal wire for conditional assignment
+assign psumIn_wire = (mode_select == 'sd1) ? psumMemOut : 'sd0;
+
 // --- Instantiate corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .clk(clk),
