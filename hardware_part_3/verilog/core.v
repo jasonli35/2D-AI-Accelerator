@@ -13,11 +13,11 @@ module core #(
     output [psum_bw*col-1:0] coreOut
 );
 
-// Extract mode selection signal
+// Mode select signal
 wire mode_select;
 assign mode_select = inst[7]; // 0 = Weight Stationary (WS), 1 = Output Stationary (OS)
 
-// SRAM signals for XMem
+// Signals for XMem
 wire xMemWEN, xMemCEN;
 wire [10:0] xMemAddress;
 wire [bw*row-1:0] xMemOut;
@@ -26,27 +26,27 @@ assign xMemCEN = inst[19];
 assign xMemWEN = inst[18];
 assign xMemAddress = inst[17:7];
 
-// SRAM signals for PSUM memory
+// Signals for PSUM memory (used in OS mode)
 wire psumMemWEN, psumMemCEN;
 wire [psum_bw*col-1:0] psumMemOut;
 wire [10:0] psumMemAddress;
 
-assign psumMemWEN = mode_select ? 1'b1 : inst[31]; // Disable writing in OS mode
-assign psumMemCEN = mode_select ? 1'b1 : inst[32]; // Disable accessing in OS mode
+assign psumMemWEN = inst[31];
+assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-// Corelet instantiation
+// --- Instantiate corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .clk(clk),
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(psumMemOut),    // Use psumMemOut for accumulation (unchanged for WS)
-    .sfpIn(psumMemOut),     // Use psumMemOut as SFP input for WS
-    .sfpOut(coreOut)        // Final output
+    .psumIn(mode_select ? psumMemOut : {psum_bw*col{1'b0}}), // Use psumMemOut only for OS mode
+    .sfpIn(mode_select ? {psum_bw*col{1'b0}} : psumMemOut), // Use sfpIn for WS mode
+    .sfpOut(coreOut)
 );
 
-// XMem instantiation
+// --- Instantiate XMem ---
 sram_32b_w2048 #(.num(num)) xMem_instance (
     .CLK(clk),
     .WEN(xMemWEN),
@@ -56,11 +56,11 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
     .Q(xMemOut)
 );
 
-// PSUM memory instantiation
+// --- Instantiate PSUM memory ---
 sram_128b_w2048 #(.num(num)) psumMem_instance (
     .CLK(clk),
-    .WEN(psumMemWEN),
-    .CEN(psumMemCEN),
+    .WEN(mode_select ? psumMemWEN : 1'b1), // Disable writing in WS mode
+    .CEN(mode_select ? psumMemCEN : 1'b1), // Disable accessing in WS mode
     .D(coreOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
