@@ -13,21 +13,19 @@ module core #(
     output [psum_bw*col-1:0] coreOut
 );
 
-// Extract mode selection signal
-wire mode_select;
-assign mode_select = inst[7]; // 0 = Weight Stationary (WS), 1 = Output Stationary (OS)
+wire [psum_bw*col-1:0] ofifoOut;
 
-// SRAM signals for XMem
-wire xMemWEN, xMemCEN;
-wire [10:0] xMemAddress;
+wire xMemWEN;
+wire xMemCEN;
+wire [10:0]xMemAddress;
 wire [bw*row-1:0] xMemOut;
 
 assign xMemCEN = inst[19];
 assign xMemWEN = inst[18];
 assign xMemAddress = inst[17:7];
 
-// SRAM signals for psumMem (used in OS mode)
-wire psumMemWEN, psumMemCEN;
+wire psumMemWEN;
+wire psumMemCEN;
 wire [psum_bw*col-1:0] psumMemOut;
 wire [10:0] psumMemAddress;
 
@@ -35,19 +33,18 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-// --- Instantiate corelet ---
-corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
+//Instantiate corelet
+corelet #(.row(row),.col(col),.psum_bw(psum_bw),.bw(bw)) corelet (
     .clk(clk),
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn((mode_select == 1) ? psumMemOut : 0), // Only enable psumMemOut for OS mode
-    .sfpIn((mode_select == 0) ? psumMemOut : 0), // Only enable sfpIn for WS mode
+    .psumIn(ofifoOut),
+    .sfpIn(psumMemOut),
     .sfpOut(coreOut)
 );
 
-// --- Instantiate XMem ---
-sram_32b_w2048 #(.num(num)) xMem_instance (
+sram_32b_w2048 #(.num(num)) xMem (
     .CLK(clk),
     .WEN(xMemWEN),
     .CEN(xMemCEN),
@@ -56,12 +53,11 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
     .Q(xMemOut)
 );
 
-// --- Instantiate psumMem (conditionally used in OS mode) ---
-sram_128b_w2048 #(.num(num)) psumMem_instance (
+sram_128b_w2048 #(.num(num)) psumMem (
     .CLK(clk),
-    .WEN((mode_select == 1) ? psumMemWEN : 1), // Disable writing when not in OS mode
-    .CEN((mode_select == 1) ? psumMemCEN : 1), // Disable access when not in OS mode
-    .D(coreOut),
+    .WEN(psumMemWEN),
+    .CEN(psumMemCEN),
+    .D(ofifoOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
 );
