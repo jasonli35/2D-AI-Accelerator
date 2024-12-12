@@ -13,9 +13,9 @@ module corelet #(
     output [psum_bw*col-1:0] sfpOut
 );
 
-// Mode selection signal (added but unused for now)
+// Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // Pass-through only, no logic changes
+assign mode_select = inst[34]; // Pass-through only, no logic changes for WS
 
 // L0 signals
 wire l0_wr;
@@ -43,8 +43,10 @@ wire [1:0] macArrayInst;
 wire [col-1:0] valid;
 wire [psum_bw*col-1:0] macArrayIn_n;
 
+// Updated logic for OS mode
+assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS uses psumIn; WS uses zeros
+
 assign macArrayInst = inst[1:0];
-assign macArrayIn_n = 0;
 assign macArrayIn = l0_out;
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (

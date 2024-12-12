@@ -92,7 +92,7 @@ core #(  .row(row), .col(col), .bw(bw), .psum_bw(psum_bw), .num(num)) core (
 ); 
 
 initial begin 
-	mode_select = 1;
+	mode_select = 0;
 	inst_w   = 0; 
 	D_xmem   = 0;
 	CEN_xmem = 1;
