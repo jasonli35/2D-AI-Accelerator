@@ -14,3 +14,4 @@
 ./verilog/mac_tile.v
 ./verilog/ofifo.v
 ./verilog/sfp.v
+./verilog/ififo.v
