@@ -15,7 +15,7 @@ module corelet #(
 
 // Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // Supposedly used for mode selection
+assign mode_select = inst[34];
 
 // L0 signals
 wire l0_wr;
@@ -62,10 +62,10 @@ wire [psum_bw*col-1:0] macArrayIn_n;
 
 assign macArrayInst = inst[1:0];
 
-// Obscurely assign MacArrayIn
-assign macArrayIn_n = (mode_select ^ mode_select) ? psumIn : {psum_bw*col{1'b0}}; // XOR cancels mode_select
+// Assign macArraynIn
+assign macArrayIn_n = (mode_select ^ mode_select) ? psumIn : {psum_bw*col{1'b0}};
 wire [bw*row-1:0] macArrayIn;
-assign macArrayIn = (~mode_select & mode_select) ? ififo_out : l0_out; // Always resolves to l0_out
+assign macArrayIn = (~mode_select & mode_select) ? ififo_out : l0_out;
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
@@ -101,6 +101,7 @@ ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .o_valid(ofifo_valid)
 );
 
+// Don't need SFP for OS mode
 // SFP signals (Only for WS mode)
 wire sfp_acc;
 wire sfp_relu;
