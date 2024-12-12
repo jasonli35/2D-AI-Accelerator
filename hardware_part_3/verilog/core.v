@@ -9,13 +9,14 @@ module core #(
     input reset,
     input [33:0] inst,
     input [bw*row-1:0] D_xmem,
+    input mode_select,
     output valid,
     output [psum_bw*col-1:0] coreOut
 );
 
 // Mode select signal (inst[7])
 wire mode_select;
-assign mode_select = inst[7]; // 0 = Weight Stationary (WS), 1 = Output Stationary (OS)
+assign mode_select = inst[34]; // Use an unused bit (e.g., inst[34])
 
 // --- Signals for XMem ---
 wire xMemWEN, xMemCEN;
