@@ -41,11 +41,12 @@ l0 #(.row(row), .bw(bw)) L0_instance (
 // ififo signals
 wire [bw*col-1:0] ififo_out;
 wire ififo_full, ififo_empty;
+reg ififo_reset;
 
 // Instantiate ififo for OS mode
 ififo #(.col(col), .bw(bw)) ififo_instance (
     .clk(clk),
-    .reset(reset),
+    .reset(ififo_reset),
     .in(coreletIn[bw*col-1:0]), // Input weights
     .out(ififo_out),           // Output weights
     .rd(inst[5] & mode_select), // Read when OS mode and inst[5] active
@@ -53,6 +54,17 @@ ififo #(.col(col), .bw(bw)) ififo_instance (
     .o_full(ififo_full),
     .o_empty(ififo_empty)
 );
+
+// Logic to reset ififo when weights reach the bottom in OS mode
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        ififo_reset <= 1;
+    end else if (mode_select && ififo_empty) begin
+        ififo_reset <= 1; // Reset FIFO to top
+    end else begin
+        ififo_reset <= 0;
+    end
+end
 
 // MAC array signals
 wire [psum_bw*col-1:0] macArrayOut;

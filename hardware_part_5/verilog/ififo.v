@@ -8,8 +8,8 @@ module ififo (
     o_full,
     o_empty
 );
-    parameter col = 8;       // Number of columns in the array
-    parameter bw = 4;        // Bitwidth of weights
+    parameter col = 8;      
+    parameter bw = 4;     
 
     input clk, rd, wr, reset;
     input [col*bw-1:0] in;   // Input weights
@@ -17,7 +17,7 @@ module ififo (
     output o_full, o_empty;
 
     reg [col*bw-1:0] fifo_mem [0:15]; // FIFO depth of 16
-    reg [3:0] rd_ptr, wr_ptr;         // Read and write pointers
+    reg [3:0] rd_ptr, wr_ptr;         
     reg full, empty;
 
     assign o_full = full;
