@@ -6,16 +6,16 @@ module corelet #(
 )(
     input clk,
     input reset,
-    input [34:0] inst, // Includes mode_select
+    input [34:0] inst, // Expanded to include mode_select
     input [bw*row-1:0] coreletIn,
     output [psum_bw*col-1:0] psumIn,
     input [psum_bw*col-1:0] sfpIn,
     output [psum_bw*col-1:0] sfpOut
 );
 
-// Mode selection signal
+// Mode selection signal (added but unused for now)
 wire mode_select;
-assign mode_select = inst[34];
+assign mode_select = inst[34]; // Pass-through only, no logic changes
 
 // L0 signals
 wire l0_wr;
@@ -43,11 +43,10 @@ wire [1:0] macArrayInst;
 wire [col-1:0] valid;
 wire [psum_bw*col-1:0] macArrayIn_n;
 
-// MAC Array input connections
 assign macArrayInst = inst[1:0];
-assign macArrayIn_n = (mode_select) ? psumIn : {psum_bw*col{1'b0}}; // OS: psumIn, WS: zero
+assign macArrayIn_n = 0;
+assign macArrayIn = l0_out;
 
-// Instantiate MAC Array
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
     .reset(reset),
@@ -68,9 +67,7 @@ wire ofifo_valid;
 
 assign ofifo_rd = inst[6];
 assign ofifo_in = macArrayOut;
-
-// Conditional assignment for OFIFO output to psumIn
-assign psumIn = (mode_select) ? ofifo_out : macArrayOut; // OS: ofifo_out, WS: direct MAC output
+assign psumIn = ofifo_out;
 
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .clk(clk),
