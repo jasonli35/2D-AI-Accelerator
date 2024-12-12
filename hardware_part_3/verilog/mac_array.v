@@ -1,6 +1,4 @@
-// Created by prof. Mingu Kang @VVIP Lab in UCSD ECE department
-// Please do not spread this code without permission 
-module mac_array (clk, reset, out_s, in_w, in_n, inst_w, valid);
+module mac_array (clk, reset, out_s, in_w, in_n, inst_w, valid, mode_sel);
 
 parameter bw = 4;
 parameter psum_bw = 16;
@@ -13,6 +11,7 @@ input  [row*bw-1:0] in_w; // inst[1]:execute, inst[0]: kernel loading
 input  [1:0] inst_w;
 input  [psum_bw*col-1:0] in_n;
 output [col-1:0] valid;
+input mode_sel; // New input for mode select
 
 wire [row*col-1:0] temp_v;
 wire [(row+1)*col*psum_bw-1:0] temp_in_n;
@@ -31,7 +30,8 @@ genvar i;
                   .in_w(in_w[bw*i-1 : bw*(i-1)]),
                   .valid(temp_v[col*i-1 : col*(i-1)]),
                   .in_n(temp_in_n[psum_bw*col*i-1 : psum_bw*col*(i-1)]),
-                  .out_s(temp_in_n[psum_bw*col*(i+1)-1 : psum_bw*col*(i)])
+                  .out_s(temp_in_n[psum_bw*col*(i+1)-1 : psum_bw*col*(i)]),
+                  .mode_sel(mode_sel) // Pass mode_sel
       );
   end
 
