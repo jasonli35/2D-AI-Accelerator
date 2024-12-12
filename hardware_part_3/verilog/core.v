@@ -26,7 +26,7 @@ assign xMemCEN = inst[19];
 assign xMemWEN = inst[18];
 assign xMemAddress = inst[17:7];
 
-// --- Signals for PSUM memory (if needed later) ---
+// --- Signals for PSUM memory ---
 wire psumMemWEN, psumMemCEN;
 wire [psum_bw*col-1:0] psumMemOut;
 wire [10:0] psumMemAddress;
@@ -35,9 +35,13 @@ assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
 
-// Zero-filled wire for unused connections
-wire [psum_bw*col-1:0] zero_fill;
-assign zero_fill = {psum_bw*col{1'b0}};
+// --- Intermediate Connections ---
+wire [psum_bw*col-1:0] psum_in_signal;
+wire [psum_bw*col-1:0] sfp_in_signal;
+
+// Conditionally assign inputs based on mode_select
+assign psum_in_signal = (mode_select == 1) ? psumMemOut : {psum_bw*col{1'b0}}; // PSUM for OS, zero for WS
+assign sfp_in_signal = (mode_select == 0) ? psumMemOut : {psum_bw*col{1'b0}}; // SFP for WS, zero for OS
 
 // --- Instantiate Corelet ---
 corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
@@ -45,8 +49,8 @@ corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn(zero_fill), // Zero for WS mode
-    .sfpIn(zero_fill),  // Zero for WS mode
+    .psumIn(psum_in_signal),
+    .sfpIn(sfp_in_signal),
     .sfpOut(coreOut)
 );
 
@@ -63,8 +67,8 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
 // --- Instantiate PSUM memory ---
 sram_128b_w2048 #(.num(num)) psumMem_instance (
     .CLK(clk),
-    .WEN(psumMemWEN),
-    .CEN(psumMemCEN),
+    .WEN(mode_select ? psumMemWEN : 1'b1), // Only enable PSUM writes in OS mode
+    .CEN(mode_select ? psumMemCEN : 1'b1), // Only enable PSUM access in OS mode
     .D(coreOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
