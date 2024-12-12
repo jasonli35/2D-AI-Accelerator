@@ -41,8 +41,8 @@ corelet #(.row(row), .col(col), .psum_bw(psum_bw), .bw(bw)) corelet_instance (
     .reset(reset),
     .inst(inst),
     .coreletIn(xMemOut),
-    .psumIn((mode_select) ? psumMemOut : {psum_bw*col{1'b0}}), // Pass psumMemOut in OS mode, else zeros
-    .sfpIn((!mode_select) ? psumMemOut : {psum_bw*col{1'b0}}), // Pass psumMemOut in WS mode, else zeros
+    .psumIn((mode_select == 1) ? psumMemOut : 0), // Only enable psumMemOut for OS mode
+    .sfpIn((mode_select == 0) ? psumMemOut : 0), // Only enable sfpIn for WS mode
     .sfpOut(coreOut)
 );
 
@@ -56,11 +56,11 @@ sram_32b_w2048 #(.num(num)) xMem_instance (
     .Q(xMemOut)
 );
 
-// --- Instantiate psumMem ---
+// --- Instantiate psumMem (conditionally used in OS mode) ---
 sram_128b_w2048 #(.num(num)) psumMem_instance (
     .CLK(clk),
-    .WEN((mode_select) ? psumMemWEN : 1'b1), // Enable writing only in OS mode
-    .CEN((mode_select) ? psumMemCEN : 1'b1), // Enable only in OS mode
+    .WEN((mode_select == 1) ? psumMemWEN : 1), // Disable writing when not in OS mode
+    .CEN((mode_select == 1) ? psumMemCEN : 1), // Disable access when not in OS mode
     .D(coreOut),
     .A(psumMemAddress),
     .Q(psumMemOut)
