@@ -13,6 +13,10 @@ module core #(
     output [psum_bw*col-1:0] coreOut
 );
 
+// Mode selection signal
+wire mode_select;
+assign mode_select = inst[34]; // Use inst[34] as mode_select (0 = WS, 1 = OS)
+
 wire [psum_bw*col-1:0] ofifoOut;
 
 wire xMemWEN;
@@ -32,7 +36,6 @@ wire [10:0] psumMemAddress;
 assign psumMemWEN = inst[31];
 assign psumMemCEN = inst[32];
 assign psumMemAddress = inst[30:20];
-assign mode_select = inst[34];
 
 //Instantiate corelet
 corelet #(.row(row),.col(col),.psum_bw(psum_bw),.bw(bw)) corelet (
