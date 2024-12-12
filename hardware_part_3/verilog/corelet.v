@@ -8,10 +8,10 @@ module corelet #(
     input reset,
     input [34:0] inst,
     input [bw*row-1:0] coreletIn,
-    input mode_select, // Add mode_select as an input
-    input [psum_bw*col-1:0] sfpIn,
     output [psum_bw*col-1:0] psumIn,
-    output [psum_bw*col-1:0] sfpOut
+    input [psum_bw*col-1:0] sfpIn,
+    output [psum_bw*col-1:0] sfpOut,
+    input mode_select // Add mode_select input
 );
 
 // --- L0 Signals ---
