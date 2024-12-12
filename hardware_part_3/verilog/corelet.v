@@ -6,7 +6,7 @@ module corelet #(
 )(
     input clk,
     input reset,
-    input [34:0] inst, // Expanded to include mode_select
+    input [34:0] inst, // Includes mode_select
     input [bw*row-1:0] coreletIn,
     output [psum_bw*col-1:0] psumIn,
     input [psum_bw*col-1:0] sfpIn,
@@ -43,10 +43,11 @@ wire [1:0] macArrayInst;
 wire [col-1:0] valid;
 wire [psum_bw*col-1:0] macArrayIn_n;
 
+// MAC Array input connections
 assign macArrayInst = inst[1:0];
-assign macArrayIn_n = mode_select ? psumIn : 0; // In OS, connect psumIn to MAC array input; in WS, use zero
-assign macArrayIn = l0_out;
+assign macArrayIn_n = (mode_select) ? psumIn : {psum_bw*col{1'b0}}; // OS: psumIn, WS: zero
 
+// Instantiate MAC Array
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
     .reset(reset),
@@ -68,8 +69,8 @@ wire ofifo_valid;
 assign ofifo_rd = inst[6];
 assign ofifo_in = macArrayOut;
 
-// Conditionally route OFIFO output to psumIn based on mode_select
-assign psumIn = mode_select ? ofifo_out : 0;
+// Conditional assignment for OFIFO output to psumIn
+assign psumIn = (mode_select) ? ofifo_out : macArrayOut; // OS: ofifo_out, WS: direct MAC output
 
 ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .clk(clk),
