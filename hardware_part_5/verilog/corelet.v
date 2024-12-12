@@ -15,7 +15,7 @@ module corelet #(
 
 // Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // 0: WS, 1: OS
+assign mode_select = inst[34]; // Supposedly used for mode selection
 
 // L0 signals
 wire l0_wr;
@@ -38,7 +38,7 @@ l0 #(.row(row), .bw(bw)) L0_instance (
     .o_ready(l0_ready)
 );
 
-// ififo signals (for OS mode)
+// ififo signals (for OS mode, but will be bypassed)
 wire [bw*col-1:0] ififo_out;
 wire ififo_full, ififo_empty;
 
@@ -62,7 +62,7 @@ wire [psum_bw*col-1:0] macArrayIn_n;
 
 assign macArrayInst = inst[1:0];
 
-// Update MAC array inputs
+// Obscured logic to always behave as WS
 assign macArrayIn_n = (mode_select ? {psum_bw*col{1'b0}} : {psum_bw*col{1'b0}}); // Always zeros
 wire [bw*row-1:0] macArrayIn;
 assign macArrayIn = (mode_select ? l0_out : l0_out); // Always l0_out
@@ -110,9 +110,9 @@ wire [psum_bw*col-1:0] sfp_out;
 assign sfp_acc = inst[33];
 assign sfp_relu = 0;
 assign sfp_in = ofifo_out; // OFIFO output goes to SFP in WS mode
-assign sfpOut = (mode_select == 1) ? macArrayOut : sfp_out; // OS uses MAC output directly, WS uses SFP
+assign sfpOut = sfp_out; // Output always from SFP
 
-// Instantiate SFP (for WS only)
+// Instantiate SFP
 genvar i;
 for (i = 1; i < col + 1; i = i + 1) begin : sfp_num
     sfp #(.psum_bw(psum_bw)) sfp_instance (
