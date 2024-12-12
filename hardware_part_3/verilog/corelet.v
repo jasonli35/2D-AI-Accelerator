@@ -15,7 +15,7 @@ module corelet #(
 
 // Mode selection signal
 wire mode_select;
-assign mode_select = inst[34]; // Pass-through only, no logic changes for WS
+assign mode_select = inst[34]; // 0 = WS, 1 = OS
 
 // L0 signals
 wire l0_wr;
@@ -38,22 +38,23 @@ l0 #(.row(row), .bw(bw)) L0_instance (
     .o_ready(l0_ready)
 );
 
+// MAC array signals
 wire [psum_bw*col-1:0] macArrayOut;
 wire [1:0] macArrayInst;
 wire [col-1:0] valid;
 wire [psum_bw*col-1:0] macArrayIn_n;
+wire [bw*row-1:0] macArrayIn_w;
 
 // Updated logic for OS mode
-assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS uses psumIn; WS uses zeros
-
 assign macArrayInst = inst[1:0];
-assign macArrayIn = l0_out;
+assign macArrayIn_n = (mode_select == 1) ? psumIn : {psum_bw*col{1'b0}}; // OS uses psumIn; WS uses zeros
+assign macArrayIn_w = (mode_select == 1) ? sfpIn[bw*row-1:0] : l0_out; // OS uses sfpIn; WS uses l0_out
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
     .reset(reset),
     .out_s(macArrayOut),
-    .in_w(l0_out),
+    .in_w(macArrayIn_w),
     .inst_w(macArrayInst),
     .in_n(macArrayIn_n),
     .valid(valid)
@@ -83,11 +84,14 @@ ofifo #(.col(col), .psum_bw(psum_bw)) ofifo_instance (
     .o_valid(ofifo_valid)
 );
 
+// SFP signals
 wire sfp_acc;
 wire sfp_relu;
 wire [psum_bw*col-1:0] sfp_in;
 wire [psum_bw*col-1:0] sfp_out;
 
+// Updated logic for SFP input
+assign sfp_in = (mode_select == 1) ? macArrayOut : ofifo_out; // OS uses macArrayOut; WS uses ofifo_out
 assign sfp_acc = inst[33];
 assign sfp_relu = 0;
 assign sfpOut = sfp_out;
@@ -100,7 +104,7 @@ for (i = 1; i < col + 1; i = i + 1) begin : sfp_num
         .acc(sfp_acc),
         .relu(sfp_relu),
         .reset(reset),
-        .in(sfpIn[psum_bw * i - 1 : psum_bw * (i - 1)]),
+        .in(sfp_in[psum_bw * i - 1 : psum_bw * (i - 1)]),
         .out(sfp_out[psum_bw * i - 1 : psum_bw * (i - 1)])
     );
 end
