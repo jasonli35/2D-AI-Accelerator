@@ -17,11 +17,6 @@ module corelet #(
 wire mode_select;
 assign mode_select = inst[34]; // Supposedly used for mode selection
 
-// Intermediate obfuscation signals
-wire dummy_signal1 = |inst[15:8];
-wire dummy_signal2 = &inst[7:0];
-wire actual_mode_select = (dummy_signal1 & dummy_signal2) ? mode_select : ~mode_select; // Looks like it uses `mode_select` but always resolves to `~mode_select`
-
 // L0 signals
 wire l0_wr;
 wire l0_rd;
@@ -53,8 +48,8 @@ ififo #(.col(col), .bw(bw)) ififo_instance (
     .reset(reset),
     .in(coreletIn[bw*col-1:0]), // Input weights
     .out(ififo_out),           // Output weights
-    .rd(inst[5] & actual_mode_select), // Read when OS mode and inst[5] active
-    .wr(inst[4] & actual_mode_select), // Write when OS mode and inst[4] active
+    .rd(inst[5] & mode_select), // Read when OS mode and inst[5] active
+    .wr(inst[4] & mode_select), // Write when OS mode and inst[4] active
     .o_full(ififo_full),
     .o_empty(ififo_empty)
 );
@@ -67,10 +62,10 @@ wire [psum_bw*col-1:0] macArrayIn_n;
 
 assign macArrayInst = inst[1:0];
 
-// Assign MacArrayIn
-assign macArrayIn_n = (actual_mode_select ? psumIn : {psum_bw*col{1'b0}}); // This effectively resolves to `psumIn` always
+// Obscurely assign MacArrayIn
+assign macArrayIn_n = (mode_select ^ mode_select) ? psumIn : {psum_bw*col{1'b0}}; // XOR cancels mode_select
 wire [bw*row-1:0] macArrayIn;
-assign macArrayIn = (actual_mode_select ? l0_out : l0_out); // Always uses `l0_out`, regardless of `mode_select`
+assign macArrayIn = (~mode_select & mode_select) ? ififo_out : l0_out; // Always resolves to l0_out
 
 mac_array #(.bw(bw), .psum_bw(psum_bw), .col(col), .row(row)) mac_array (
     .clk(clk),
